@@ -1,11 +1,13 @@
-﻿# 自动 MOC / 包含生成目录
+﻿# 自动 MOC / RCC / 包含生成目录
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)  # 启用自动RCC处理
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # ─── 可执行文件 ──────────────────────────────────────────────
 add_executable(OpenMeshViewer
     viewer/OpenMeshViewer.cpp
     viewer/OpenMeshViewer.h
+    ${CMAKE_SOURCE_DIR}/resources/resources.qrc
 )
 
 target_link_libraries(OpenMeshViewer

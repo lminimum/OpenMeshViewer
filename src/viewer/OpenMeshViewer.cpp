@@ -7,54 +7,9 @@
 #include <QStatusBar>
 #include <QVBoxLayout>
 #include <QMatrix4x4>
+#include <QFile>
+#include <QTextStream>
 #include <cmath>
-
-// Shader sources
-const char *vertexShaderSource = R"(
-    #version 330 core
-    layout(location = 0) in vec3 position;
-    layout(location = 1) in vec3 normal;
-    
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
-    
-    out vec3 fragNormal;
-    out vec3 fragPos;
-    
-    void main() {
-        gl_Position = projection * view * model * vec4(position, 1.0);
-        fragNormal = mat3(transpose(inverse(model))) * normal;
-        fragPos = vec3(model * vec4(position, 1.0));
-    }
-)";
-
-const char *fragmentShaderSource = R"(
-    #version 330 core
-    in vec3 fragNormal;
-    in vec3 fragPos;
-    
-    out vec4 fragColor;
-    
-    void main() {
-        vec3 lightPos = vec3(10.0, 10.0, 10.0);
-        vec3 lightColor = vec3(1.0, 1.0, 1.0);
-        vec3 objectColor = vec3(0.7, 0.7, 0.9);
-        
-        // Ambient
-        float ambientStrength = 0.3;
-        vec3 ambient = ambientStrength * lightColor;
-        
-        // Diffuse
-        vec3 norm = normalize(fragNormal);
-        vec3 lightDir = normalize(lightPos - fragPos);
-        float diff = max(dot(norm, lightDir), 0.0);
-        vec3 diffuse = diff * lightColor;
-        
-        vec3 result = (ambient + diffuse) * objectColor;
-        fragColor = vec4(result, 1.0);
-    }
-)";
 
 // MeshViewerWidget implementation
 MeshViewerWidget::MeshViewerWidget(QWidget *parent)
@@ -136,8 +91,8 @@ void MeshViewerWidget::initializeGL()
 
     // Create shader program
     program = new QOpenGLShaderProgram();
-    program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
-    program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource);
+    program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/Shaders/basic.vert.glsl");
+    program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/Shaders/basic.frag.glsl");
     program->link();
 
     // Create VAO and buffers
