@@ -11,13 +11,14 @@ endif()
 
 # ─── 第三方依赖路径 ───────────────────────────────────────────
 # Qt
-set(CMAKE_PREFIX_PATH "B:/Env/QT6/6.9.0/msvc2022_64/lib/cmake")
+set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64/lib/cmake")
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets Gui)
 
 # OpenMesh
-set(OpenMesh_DIR "B:/Env/OpenMesh 11.0/share/OpenMesh/cmake")
+set(OPENMESH_BIN "C:/Program Files/OpenMesh 11.0")
+set(OpenMesh_DIR "${OPENMESH_BIN}/share/OpenMesh/cmake")
 find_package(OpenMesh REQUIRED)
-link_directories("B:/Env/OpenMesh 11.0/lib")  # 供导入库查找
+link_directories("${OPENMESH_BIN}/lib")  # 供导入库查找
 
 # ─── 子工程 ──────────────────────────────────────────────────
 add_subdirectory(src)

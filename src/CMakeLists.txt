@@ -42,7 +42,6 @@ if(WIN32)
     )
 
     # OpenMesh DLL
-    set(OPENMESH_BIN "B:/Env/OpenMesh 11.0")
     add_custom_command(TARGET OpenMeshViewer POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${OPENMESH_BIN}/OpenMeshCore${DEBUG_D}.dll"
