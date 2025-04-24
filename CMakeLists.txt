@@ -14,15 +14,23 @@ if(MSVC)                                      # MSVC 让 __cplusplus 返回真�
 endif()
 
 # ─── 第三方依赖路径 ───────────────────────────────────────────
+# 设置路径变量默认值，如果在CMakePresets.json中未设置
+if(NOT DEFINED QT_DIR)
+    set(QT_DIR "C:/Qt/6.9.0/msvc2022_64/lib/cmake" CACHE PATH "Qt cmake directory")
+endif()
+
+if(NOT DEFINED OPENMESH_DIR)
+    set(OPENMESH_DIR "C:/Program Files/OpenMesh 11.0" CACHE PATH "OpenMesh installation directory")
+endif()
+
 # Qt
-set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64/lib/cmake")
+set(CMAKE_PREFIX_PATH ${QT_DIR})
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets Gui)
 
 # OpenMesh
-set(OPENMESH_BIN "C:/Program Files/OpenMesh 11.0")
-set(OpenMesh_DIR "${OPENMESH_BIN}/share/OpenMesh/cmake")
+set(OpenMesh_DIR "${OPENMESH_DIR}/share/OpenMesh/cmake")
 find_package(OpenMesh REQUIRED)
-link_directories("${OPENMESH_BIN}/lib")  # 供导入库查找
+link_directories("${OPENMESH_DIR}/lib")  # 供导入库查找
 
 # ─── 子工程 ──────────────────────────────────────────────────
 add_subdirectory(src)
