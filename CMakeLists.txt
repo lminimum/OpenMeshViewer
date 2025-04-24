@@ -31,6 +31,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets Gui)
 set(OpenMesh_DIR "${OPENMESH_DIR}/share/OpenMesh/cmake")
 find_package(OpenMesh REQUIRED)
 link_directories("${OPENMESH_DIR}/lib")  # 供导入库查找
+set(OPENMESH_BIN "${OPENMESH_DIR}")  # 添加 OpenMesh 二进制文件路径变量
 
 # ─── 子工程 ──────────────────────────────────────────────────
 add_subdirectory(src)
