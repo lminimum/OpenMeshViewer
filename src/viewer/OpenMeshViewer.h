@@ -21,46 +21,54 @@
 // Define the mesh type
 typedef OpenMesh::TriMesh_ArrayKernelT<> Mesh;
 
-// MeshViewerWidget class - OpenGL widget for rendering the mesh
-class MeshViewerWidget : public QOpenGLWidget, protected QOpenGLFunctions
-{
-    Q_OBJECT
+enum RenderMode {
+    Solid,  // Normal rendering
+    Wireframe  // Wireframe rendering
+};
 
-public:
-    MeshViewerWidget(QWidget* parent = nullptr);
-    ~MeshViewerWidget();
 
-    bool loadMesh(const QString& filename);
-    void resetView();
+class MeshViewerWidget : public QOpenGLWidget, protected QOpenGLFunctions  
+{  
+   Q_OBJECT  
 
-protected:
-    void initializeGL() override;
-    void paintGL() override;
-    void resizeGL(int width, int height) override;
-    
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void wheelEvent(QWheelEvent* event) override;
+public:  
+   MeshViewerWidget(QWidget* parent = nullptr);  
+   ~MeshViewerWidget();  
 
-private:
-    void updateMeshBuffers();
-    
-    Mesh mesh;
-    bool meshLoaded;
-    
-    QOpenGLShaderProgram* program;
-    QOpenGLVertexArrayObject vao;
-    QOpenGLBuffer vertexBuffer;
-    QOpenGLBuffer indexBuffer;
-    int indexCount;  // Store the number of indices for drawing
-    
-    QMatrix4x4 modelMatrix;
-    QMatrix4x4 viewMatrix;
-    QMatrix4x4 projectionMatrix;
-    
-    QPoint lastMousePosition;
-    float rotationX, rotationY;
-    float zoom;
+   bool loadMesh(const QString& filename);  
+   void resetView();  
+   void toggleRenderMode();  
+
+   RenderMode renderMode = Solid;  // Move this to public for accessibility  
+
+protected:  
+   void initializeGL() override;  
+   void paintGL() override;  
+   void resizeGL(int width, int height) override;  
+
+   void mousePressEvent(QMouseEvent* event) override;  
+   void mouseMoveEvent(QMouseEvent* event) override;  
+   void wheelEvent(QWheelEvent* event) override;  
+
+private:  
+   void updateMeshBuffers();  
+
+   Mesh mesh;  
+   bool meshLoaded;  
+
+   QOpenGLShaderProgram* program;  
+   QOpenGLVertexArrayObject vao;  
+   QOpenGLBuffer vertexBuffer;  
+   QOpenGLBuffer indexBuffer;  
+   int indexCount;  // Store the number of indices for drawing  
+
+   QMatrix4x4 modelMatrix;  
+   QMatrix4x4 viewMatrix;  
+   QMatrix4x4 projectionMatrix;  
+
+   QPoint lastMousePosition;  
+   float rotationX, rotationY;  
+   float zoom;  
 };
 
 // MainWindow class - the application's main window
@@ -73,6 +81,7 @@ public:
 
 private slots:
     void openFile();
+    void toggleRenderMode();
 
 public slots:
     void loadDefaultModel();

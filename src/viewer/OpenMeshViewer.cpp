@@ -1,6 +1,4 @@
-﻿// OpenMeshViewer.cpp : Defines the entry point for the application.
-
-#include "OpenMeshViewer.h"
+﻿#include "OpenMeshViewer.h"
 #include <QApplication>
 #include <QMainWindow>
 #include <QMenuBar>
@@ -12,7 +10,6 @@
 #include <QStandardPaths>
 #include <cmath>
 
-// MeshViewerWidget implementation
 MeshViewerWidget::MeshViewerWidget(QWidget *parent)
     : QOpenGLWidget(parent),
       meshLoaded(false),
@@ -271,41 +268,65 @@ void MeshViewerWidget::updateMeshBuffers()
 
 void MeshViewerWidget::paintGL()
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (!meshLoaded || !program)
-        return;
+   if (!meshLoaded || !program)
+       return;
 
-    program->bind();
-    vao.bind();
+   program->bind();
+   vao.bind();
 
-    // 更新模型矩阵
-    modelMatrix.setToIdentity();
-    modelMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
-    modelMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
+   // 更新模型矩阵
+   modelMatrix.setToIdentity();
+   modelMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
+   modelMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
 
-    // 更新视图矩阵
-    viewMatrix.setToIdentity();
-    viewMatrix.translate(0.0f, 0.0f, -zoom);
+   // 更新视图矩阵
+   viewMatrix.setToIdentity();
+   viewMatrix.translate(0.0f, 0.0f, -zoom);
 
-    // 设置着色器的矩阵
-    program->setUniformValue("model", modelMatrix);
-    program->setUniformValue("view", viewMatrix);
-    program->setUniformValue("projection", projectionMatrix);
+   // 设置着色器的矩阵
+   program->setUniformValue("model", modelMatrix);
+   program->setUniformValue("view", viewMatrix);
+   program->setUniformValue("projection", projectionMatrix);
 
-    // 绘制网格的边框（使用 GL_LINES 来绘制每条网格边）
-    glDrawElements(GL_LINES, indexCount, GL_UNSIGNED_INT, 0);
+   if (renderMode == Solid)
+   {
+       // 填充模式（默认）
+       glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+   }
+   else if (renderMode == Wireframe)
+   {
+	   // 线框模式
+	   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	   glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+	   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);  // 恢复填充模式
+   }
 
-    vao.release();
-    program->release();
+
+   vao.release();
+   program->release();
 }
-
 
 void MeshViewerWidget::resizeGL(int width, int height)
 {
     // Update projection matrix
     projectionMatrix.setToIdentity();
     projectionMatrix.perspective(45.0f, width / float(height), 0.1f, 100.0f);
+}
+
+void MeshViewerWidget::toggleRenderMode()
+{
+    if (renderMode == Solid)
+    {
+        renderMode = Wireframe;
+    }
+    else
+    {
+        renderMode = Solid;
+    }
+
+    update();  // Trigger a repaint to apply the new render mode
 }
 
 void MeshViewerWidget::mousePressEvent(QMouseEvent *event)
@@ -378,6 +399,12 @@ void MainWindow::createActions()
     exitAction->setShortcut(QKeySequence::Quit);
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
     fileMenu->addAction(exitAction);
+
+    // Add the render mode toggle action
+    QMenu* ToggleMenu = menuBar()->addMenu("&Toggle");
+    QAction* toggleRenderModeAction = new QAction("Toggle Render Mode", this);
+    connect(toggleRenderModeAction, &QAction::triggered, this, &MainWindow::toggleRenderMode);
+    ToggleMenu->addAction(toggleRenderModeAction);
 }
 
 void MainWindow::createMenus()
@@ -428,6 +455,17 @@ void MainWindow::loadDefaultModel()
         }
     }
     
+}
+
+void MainWindow::toggleRenderMode()
+{
+    // Toggle the render mode between Solid and Wireframe
+    if (meshViewer)
+    {
+        meshViewer->toggleRenderMode();
+    }
+
+    statusBar()->showMessage("Render mode toggled", 2000);
 }
 
 int main(int argc, char *argv[])
