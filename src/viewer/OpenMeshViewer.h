@@ -1,7 +1,4 @@
-﻿// OpenMeshViewer.h : Include file for standard system include files,
-// or project specific include files.
-
-#pragma once
+﻿#pragma once
 
 #include <iostream>
 #include <string>
@@ -76,7 +73,9 @@ public:
 
 private slots:
     void openFile();
-    void about();
+
+public slots:
+    void loadDefaultModel();
 
 private:
     MeshViewerWidget* meshViewer;

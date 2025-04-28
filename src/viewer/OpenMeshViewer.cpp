@@ -9,6 +9,7 @@
 #include <QMatrix4x4>
 #include <QFile>
 #include <QTextStream>
+#include <QStandardPaths>
 #include <cmath>
 
 // MeshViewerWidget implementation
@@ -277,12 +278,6 @@ void MainWindow::createActions()
     exitAction->setShortcut(QKeySequence::Quit);
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
     fileMenu->addAction(exitAction);
-
-    QMenu *helpMenu = menuBar()->addMenu("&Help");
-
-    QAction *aboutAction = new QAction("&About", this);
-    connect(aboutAction, &QAction::triggered, this, &MainWindow::about);
-    helpMenu->addAction(aboutAction);
 }
 
 void MainWindow::createMenus()
@@ -311,12 +306,28 @@ void MainWindow::openFile()
     }
 }
 
-void MainWindow::about()
+void MainWindow::loadDefaultModel()
 {
-    QMessageBox::about(this, "About OpenMesh Viewer",
-                       "OpenMesh Viewer\n\n"
-                       "A simple 3D mesh viewer using Qt and OpenMesh\n"
-                       "© 2025");
+    QFile resourceFile(":/models/Models/Dino.ply");
+    if (resourceFile.open(QIODevice::ReadOnly))
+    {
+        QByteArray data = resourceFile.readAll();
+
+        QString tempFilePath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/Dino_temp.ply";
+        QFile tempFile(tempFilePath);
+        if (tempFile.open(QIODevice::WriteOnly))
+        {
+            tempFile.write(data);
+            tempFile.close();
+            meshViewer->loadMesh(tempFilePath);
+			tempFile.remove();
+		}
+		else
+		{
+			QMessageBox::critical(this, "Error", "Failed to create temporary file");
+        }
+    }
+    
 }
 
 int main(int argc, char *argv[])
@@ -325,6 +336,6 @@ int main(int argc, char *argv[])
 
     MainWindow mainWindow;
     mainWindow.show();
-
+	mainWindow.loadDefaultModel();
     return app.exec();
 }
