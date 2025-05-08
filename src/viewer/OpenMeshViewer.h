@@ -2,8 +2,6 @@
 
 #include <iostream>
 #include <string>
-
-// Qt includes
 #include <QMainWindow>
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
@@ -14,7 +12,6 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-// OpenMesh includes
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
@@ -39,7 +36,7 @@ public:
    void resetView();  
    void toggleRenderMode();  
 
-   RenderMode renderMode = Solid;  // Move this to public for accessibility  
+   RenderMode renderMode = Solid;
 
 protected:  
    void initializeGL() override;  
@@ -56,11 +53,14 @@ private:
    Mesh mesh;  
    bool meshLoaded;  
 
-   QOpenGLShaderProgram* program;  
+   //QOpenGLShaderProgram* program;  
+   QOpenGLShaderProgram* solidProgram = nullptr;
+   QOpenGLShaderProgram* wireframeProgram = nullptr;
+
    QOpenGLVertexArrayObject vao;  
    QOpenGLBuffer vertexBuffer;  
    QOpenGLBuffer indexBuffer;  
-   int indexCount;  // Store the number of indices for drawing  
+   int indexCount; 
 
    QMatrix4x4 modelMatrix;  
    QMatrix4x4 viewMatrix;  

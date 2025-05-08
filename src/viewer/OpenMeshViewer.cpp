@@ -13,7 +13,7 @@
 MeshViewerWidget::MeshViewerWidget(QWidget *parent)
     : QOpenGLWidget(parent),
       meshLoaded(false),
-      program(nullptr),
+      //program(nullptr),
       vertexBuffer(QOpenGLBuffer::VertexBuffer),
       indexBuffer(QOpenGLBuffer::IndexBuffer),
       rotationX(0.0f),
@@ -28,11 +28,17 @@ MeshViewerWidget::~MeshViewerWidget()
 {
     makeCurrent();
 
-    if (program)
+    if (solidProgram)
     {
-        delete program;
-        program = nullptr;
+        delete solidProgram;
+        solidProgram = nullptr;
     }
+    if (wireframeProgram)
+    {
+        delete wireframeProgram;
+        wireframeProgram = nullptr;
+    }
+
     vao.destroy();
     vertexBuffer.destroy();
     indexBuffer.destroy();
@@ -88,10 +94,21 @@ void MeshViewerWidget::initializeGL()
     glEnable(GL_DEPTH_TEST);
 
     // Create shader program
-    program = new QOpenGLShaderProgram();
+    //program = new QOpenGLShaderProgram();
+     /*
     program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/Shaders/basic.vert.glsl");
     program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/Shaders/basic.frag.glsl");
-    program->link();
+    program->link();*/
+
+    solidProgram = new QOpenGLShaderProgram();
+    solidProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/Shaders/solid.vert.glsl");
+    solidProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/Shaders/solid.frag.glsl");
+    solidProgram->link();
+
+    wireframeProgram = new QOpenGLShaderProgram();
+    wireframeProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/Shaders/basic.vert.glsl");
+    wireframeProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/Shaders/basic.frag.glsl");
+    wireframeProgram->link();
 
     // Create VAO and buffers
     vao.create();
@@ -109,94 +126,6 @@ void MeshViewerWidget::initializeGL()
     }
 }
 
-//void MeshViewerWidget::updateMeshBuffers()
-//{
-//    if (!meshLoaded)
-//        return;
-//
-//    vao.bind();
-//
-//    // Prepare vertex data (position and normal)
-//    QVector<GLfloat> vertices;
-//    for (Mesh::VertexIter v_it = mesh.vertices_begin(); v_it != mesh.vertices_end(); ++v_it)
-//    {
-//        Mesh::Point p = mesh.point(*v_it);
-//        Mesh::Normal n = mesh.normal(*v_it);
-//
-//        // Position
-//        vertices << p[0] << p[1] << p[2];
-//        // Normal
-//        vertices << n[0] << n[1] << n[2];
-//    }
-//
-//    // Prepare index data for triangular faces
-//    QVector<GLuint> indices;
-//    for (Mesh::FaceIter f_it = mesh.faces_begin(); f_it != mesh.faces_end(); ++f_it)
-//    {
-//        for (Mesh::FaceVertexIter fv_it = mesh.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
-//        {
-//            indices << fv_it->idx();
-//        }
-//    }
-//
-//    // Store number of indices for later use
-//    indexCount = indices.size();
-//
-//    // Upload vertex data
-//    vertexBuffer.bind();
-//    vertexBuffer.allocate(vertices.constData(), vertices.size() * sizeof(GLfloat));
-//
-//    // Set vertex attribute pointers
-//    program->bind();
-//
-//    // Position attribute
-//    int posAttr = program->attributeLocation("position");
-//    program->enableAttributeArray(posAttr);
-//    program->setAttributeBuffer(posAttr, GL_FLOAT, 0, 3, 6 * sizeof(GLfloat));
-//
-//    // Normal attribute
-//    int normalAttr = program->attributeLocation("normal");
-//    program->enableAttributeArray(normalAttr);
-//    program->setAttributeBuffer(normalAttr, GL_FLOAT, 3 * sizeof(GLfloat), 3, 6 * sizeof(GLfloat));
-//
-//    // Upload index data
-//    indexBuffer.bind();
-//    indexBuffer.allocate(indices.constData(), indices.size() * sizeof(GLuint));
-//
-//    program->release();
-//    vao.release();
-//}
-//
-//void MeshViewerWidget::paintGL()
-//{
-//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-//    if (!meshLoaded || !program)
-//        return;
-//
-//    program->bind();
-//    vao.bind();
-//
-//    // Update model matrix with current rotation
-//    modelMatrix.setToIdentity();
-//    modelMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
-//    modelMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
-//
-//    // Update view matrix with current zoom
-//    viewMatrix.setToIdentity();
-//    viewMatrix.translate(0.0f, 0.0f, -zoom);
-//
-//    // Set uniforms
-//    program->setUniformValue("model", modelMatrix);
-//    program->setUniformValue("view", viewMatrix);
-//    program->setUniformValue("projection", projectionMatrix);
-//
-//    // Draw mesh
-//    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-//
-//    vao.release();
-//    program->release();
-//}
 void MeshViewerWidget::updateMeshBuffers()
 {
     if (!meshLoaded)
@@ -219,22 +148,29 @@ void MeshViewerWidget::updateMeshBuffers()
 
     // 准备索引数据，假设每个面是三角形
     QVector<GLuint> indices;
+    indices.clear();
     for (Mesh::FaceIter f_it = mesh.faces_begin(); f_it != mesh.faces_end(); ++f_it)
     {
-        // 对于每个三角形面，提取三个顶点
         QList<GLuint> faceIndices;
         for (Mesh::FaceVertexIter fv_it = mesh.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
         {
             faceIndices.append(fv_it->idx());
         }
 
-        // 确保每个三角形有 3 个顶点
         if (faceIndices.size() == 3)
         {
-            // 添加三条边
-            indices << faceIndices[0] << faceIndices[1];
-            indices << faceIndices[1] << faceIndices[2];
-            indices << faceIndices[2] << faceIndices[0];
+            if (renderMode == Wireframe)
+            {
+                // 三条边作为线段
+                indices << faceIndices[0] << faceIndices[1];
+                indices << faceIndices[1] << faceIndices[2];
+                indices << faceIndices[2] << faceIndices[0];
+            }
+            else
+            {
+                // 三角面片
+                indices << faceIndices[0] << faceIndices[1] << faceIndices[2];
+            }
         }
     }
 
@@ -246,66 +182,65 @@ void MeshViewerWidget::updateMeshBuffers()
     vertexBuffer.allocate(vertices.constData(), vertices.size() * sizeof(GLfloat));
 
     // 设置顶点属性指针
-    program->bind();
+    /*program->bind();*/
+    QOpenGLShaderProgram* activeProgram = (renderMode == Solid) ? solidProgram : wireframeProgram;
+    activeProgram->bind();
 
     // 位置属性
-    int posAttr = program->attributeLocation("position");
-    program->enableAttributeArray(posAttr);
-    program->setAttributeBuffer(posAttr, GL_FLOAT, 0, 3, 6 * sizeof(GLfloat));
+    int posAttr = activeProgram->attributeLocation("position");
+    activeProgram->enableAttributeArray(posAttr);
+    activeProgram->setAttributeBuffer(posAttr, GL_FLOAT, 0, 3, 6 * sizeof(GLfloat));
 
     // 法线属性
-    int normalAttr = program->attributeLocation("normal");
-    program->enableAttributeArray(normalAttr);
-    program->setAttributeBuffer(normalAttr, GL_FLOAT, 3 * sizeof(GLfloat), 3, 6 * sizeof(GLfloat));
+    int normalAttr = activeProgram->attributeLocation("normal");
+    activeProgram->enableAttributeArray(normalAttr);
+    activeProgram->setAttributeBuffer(normalAttr, GL_FLOAT, 3 * sizeof(GLfloat), 3, 6 * sizeof(GLfloat));
 
     // 上传索引数据
     indexBuffer.bind();
     indexBuffer.allocate(indices.constData(), indices.size() * sizeof(GLuint));
 
-    program->release();
+    activeProgram->release();
     vao.release();
 }
 
 void MeshViewerWidget::paintGL()
 {
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-   if (!meshLoaded || !program)
-       return;
+    if (!meshLoaded)
+        return;
 
-   program->bind();
-   vao.bind();
+    QOpenGLShaderProgram* activeProgram = (renderMode == Solid) ? solidProgram : wireframeProgram;
+    if (!activeProgram) return;
 
-   // 更新模型矩阵
-   modelMatrix.setToIdentity();
-   modelMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
-   modelMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
+    activeProgram->bind();
+    vao.bind();
 
-   // 更新视图矩阵
-   viewMatrix.setToIdentity();
-   viewMatrix.translate(0.0f, 0.0f, -zoom);
+    modelMatrix.setToIdentity();
+    modelMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
+    modelMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
 
-   // 设置着色器的矩阵
-   program->setUniformValue("model", modelMatrix);
-   program->setUniformValue("view", viewMatrix);
-   program->setUniformValue("projection", projectionMatrix);
+    viewMatrix.setToIdentity();
+    viewMatrix.translate(0.0f, 0.0f, -zoom);
 
-   if (renderMode == Solid)
-   {
-       // 填充模式（默认）
-       glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-   }
-   else if (renderMode == Wireframe)
-   {
-	   // 线框模式
-	   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	   glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-	   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);  // 恢复填充模式
-   }
+    activeProgram->setUniformValue("model", modelMatrix);
+    activeProgram->setUniformValue("view", viewMatrix);
+    activeProgram->setUniformValue("projection", projectionMatrix);
 
+    if (renderMode == Solid)
+    {
+        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+    }
+    else if (renderMode == Wireframe)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDrawElements(GL_LINES, indexCount, GL_UNSIGNED_INT, 0);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
 
-   vao.release();
-   program->release();
+    vao.release();
+    activeProgram->release();
 }
 
 void MeshViewerWidget::resizeGL(int width, int height)
@@ -359,7 +294,6 @@ void MeshViewerWidget::wheelEvent(QWheelEvent *event)
     update();
 }
 
-// MainWindow implementation
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
