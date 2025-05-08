@@ -1,4 +1,5 @@
 ﻿#include "OpenMeshViewer.h"
+#include "MeshParameterizer.h"
 #include <QApplication>
 #include <QMainWindow>
 #include <QMenuBar>
@@ -46,6 +47,17 @@ MeshViewerWidget::~MeshViewerWidget()
 
     doneCurrent();
 }
+
+void MeshViewerWidget::parameterizeMesh()
+{
+    if (meshLoaded && MeshParameterizer::parameterize(mesh))
+    {
+        showUV = true;         // 自动切换
+        updateMeshBuffers();   // 更新纹理坐标缓冲
+        update();
+    }
+}
+
 
 bool MeshViewerWidget::loadMesh(const QString &filename)
 {
@@ -135,12 +147,19 @@ void MeshViewerWidget::updateMeshBuffers()
     QVector<GLfloat> vertices;
     for (Mesh::VertexIter v_it = mesh.vertices_begin(); v_it != mesh.vertices_end(); ++v_it)
     {
-        Mesh::Point p = mesh.point(*v_it);
-        Mesh::Normal n = mesh.normal(*v_it);
+        OpenMesh::Vec3f p;
+        if (showUV)
+        {
+            OpenMesh::Vec2f uv = mesh.texcoord2D(*v_it);
+            p = OpenMesh::Vec3f(uv[0], uv[1], 0.0f);  // 平铺到 XY 平面
+        }
+        else
+        {
+            p = mesh.point(*v_it);  // 原始 3D 位置
+        }
 
-        // 顶点位置
+        Mesh::Normal n = mesh.normal(*v_it);
         vertices << p[0] << p[1] << p[2];
-        // 顶点法线（如果你有需要可以使用）
         vertices << n[0] << n[1] << n[2];
     }
 
@@ -180,7 +199,6 @@ void MeshViewerWidget::updateMeshBuffers()
     vertexBuffer.allocate(vertices.constData(), vertices.size() * sizeof(GLfloat));
 
     // 设置顶点属性指针
-    /*program->bind();*/
     QOpenGLShaderProgram* activeProgram = (renderMode == Solid) ? solidProgram : wireframeProgram;
     activeProgram->bind();
 
@@ -220,11 +238,26 @@ void MeshViewerWidget::paintGL()
     modelMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
     modelMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
 
-    viewMatrix.setToIdentity();
+   /* viewMatrix.setToIdentity();
     viewMatrix.lookAt(
         QVector3D(0, 0, zoom),  
         QVector3D(0, 0, 0),     
-        QVector3D(0, 1, 0));   
+        QVector3D(0, 1, 0));  */
+    viewMatrix.setToIdentity();
+
+    if (showUV)
+    {
+        viewMatrix.lookAt(
+            QVector3D(0, 0, 1.0f), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
+        projectionMatrix.setToIdentity();
+        projectionMatrix.ortho(-1, 1, -1, 1, 0.1f, 10.0f);
+    }
+    else
+    {
+        viewMatrix.lookAt(QVector3D(0, 0, zoom), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
+        projectionMatrix.setToIdentity();
+        projectionMatrix.perspective(45.0f, float(width()) / height(), 0.1f, 100.0f);
+    }
 
     activeProgram->setUniformValue("model", modelMatrix);
     activeProgram->setUniformValue("view", viewMatrix);
@@ -268,6 +301,18 @@ void MeshViewerWidget::toggleRenderMode()
     doneCurrent();
 
     update(); 
+}
+
+void MeshViewerWidget::toggleUVView()
+{
+    if (!showUV) {
+        parameterizeMesh();
+    }
+    showUV = !showUV;
+    makeCurrent();              
+    updateMeshBuffers();         
+    doneCurrent();
+    update();
 }
 
 void MeshViewerWidget::mousePressEvent(QMouseEvent* event)
@@ -357,6 +402,11 @@ void MainWindow::createActions()
     QAction* toggleRenderModeAction = new QAction("Toggle Render Mode", this);
     connect(toggleRenderModeAction, &QAction::triggered, this, &MainWindow::toggleRenderMode);
     ToggleMenu->addAction(toggleRenderModeAction);
+
+    QAction* toggleUVAction = new QAction("Toggle UV View", this);
+    connect(toggleUVAction, &QAction::triggered, meshViewer, &MeshViewerWidget::toggleUVView);
+    ToggleMenu->addAction(toggleUVAction);
+
 }
 
 void MainWindow::createMenus()
