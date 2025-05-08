@@ -261,7 +261,11 @@ void MeshViewerWidget::toggleRenderMode()
         renderMode = Solid;
     }
 
-    update();  // Trigger a repaint to apply the new render mode
+    makeCurrent();       
+    updateMeshBuffers();  
+    doneCurrent();
+
+    update(); 
 }
 
 void MeshViewerWidget::mousePressEvent(QMouseEvent *event)
