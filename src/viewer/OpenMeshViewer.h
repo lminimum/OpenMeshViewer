@@ -35,6 +35,7 @@ public:
    bool loadMesh(const QString& filename);  
    void resetView();  
    void toggleRenderMode();  
+   QVector3D translation;  // 模型平移
 
    RenderMode renderMode = Solid;
 
@@ -42,7 +43,7 @@ protected:
    void initializeGL() override;  
    void paintGL() override;  
    void resizeGL(int width, int height) override;  
-
+   void keyPressEvent(QKeyEvent* event);
    void mousePressEvent(QMouseEvent* event) override;  
    void mouseMoveEvent(QMouseEvent* event) override;  
    void wheelEvent(QWheelEvent* event) override;  

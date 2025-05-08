@@ -27,6 +27,7 @@ MeshViewerWidget::MeshViewerWidget(QWidget *parent)
 MeshViewerWidget::~MeshViewerWidget()
 {
     makeCurrent();
+    translation = QVector3D(0.0f, 0.0f, 0.0f);
 
     if (solidProgram)
     {
@@ -79,10 +80,7 @@ void MeshViewerWidget::resetView()
     rotationX = 0.0f;
     rotationY = 0.0f;
     zoom = 5.0f;
-
-    modelMatrix.setToIdentity();
-    viewMatrix.setToIdentity();
-    viewMatrix.translate(0.0f, 0.0f, -zoom);
+    translation = QVector3D(0.0f, 0.0f, 0.0f);
 
     update();
 }
@@ -218,11 +216,15 @@ void MeshViewerWidget::paintGL()
     vao.bind();
 
     modelMatrix.setToIdentity();
+    modelMatrix.translate(translation);
     modelMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
     modelMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
 
     viewMatrix.setToIdentity();
-    viewMatrix.translate(0.0f, 0.0f, -zoom);
+    viewMatrix.lookAt(
+        QVector3D(0, 0, zoom),  
+        QVector3D(0, 0, 0),     
+        QVector3D(0, 1, 0));   
 
     activeProgram->setUniformValue("model", modelMatrix);
     activeProgram->setUniformValue("view", viewMatrix);
@@ -268,34 +270,46 @@ void MeshViewerWidget::toggleRenderMode()
     update(); 
 }
 
-void MeshViewerWidget::mousePressEvent(QMouseEvent *event)
+void MeshViewerWidget::mousePressEvent(QMouseEvent* event)
 {
     lastMousePosition = event->pos();
 }
 
-void MeshViewerWidget::mouseMoveEvent(QMouseEvent *event)
+void MeshViewerWidget::mouseMoveEvent(QMouseEvent* event)
 {
+    QPoint delta = event->pos() - lastMousePosition;
+    lastMousePosition = event->pos();
+
     if (event->buttons() & Qt::LeftButton)
     {
-        QPoint delta = event->pos() - lastMousePosition;
         rotationY += 0.5f * delta.x();
         rotationX += 0.5f * delta.y();
+    }
+    else if (event->buttons() & Qt::RightButton)
+    {
+        float panSpeed = 0.001f * zoom; 
 
-        update();
+        translation -= QVector3D(-delta.x() * panSpeed, delta.y() * panSpeed, 0.0f);
     }
 
-    lastMousePosition = event->pos();
+    update();
 }
 
-void MeshViewerWidget::wheelEvent(QWheelEvent *event)
+void MeshViewerWidget::wheelEvent(QWheelEvent* event)
 {
-    zoom -= event->angleDelta().y() / 120.0f;
-    zoom = qMax(1.0f, qMin(zoom, 15.0f));
-
-    viewMatrix.setToIdentity();
-    viewMatrix.translate(0.0f, 0.0f, -zoom);
+    float zoomStep = 0.2f; 
+    zoom -= zoomStep * (event->angleDelta().y() / 120.0f);
+    zoom = qBound(0.1f, zoom, 50.0f);  
 
     update();
+}
+
+void MeshViewerWidget::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_R)
+    {
+        resetView();
+    }
 }
 
 MainWindow::MainWindow(QWidget *parent)
