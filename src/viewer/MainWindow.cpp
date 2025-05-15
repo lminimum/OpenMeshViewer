@@ -2,6 +2,15 @@
 #include "MeshViewerWidget.h"
 
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFormLayout>
+#include <QToolBar>
+#include <QGroupBox>
+#include <QPushButton>
+#include <QCheckBox>
+#include <QRadioButton>
+#include <QColorDialog>
+#include <QLabel>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QStatusBar>
@@ -13,19 +22,73 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
     QWidget* centralWidget = new QWidget();
-    QVBoxLayout* layout = new QVBoxLayout(centralWidget);
+    QHBoxLayout* mainLayout = new QHBoxLayout(centralWidget);
 
+    // ➤ 左侧控件面板
+    QWidget* controlPanel = new QWidget;
+    QVBoxLayout* controlLayout = new QVBoxLayout(controlPanel);
+
+    // ─ 工具栏（用按钮模拟）
+    QToolBar* toolbar = new QToolBar;
+    toolbar->addAction(QIcon(":/icons/open.png"), "Open");
+    toolbar->addAction(QIcon(":/icons/save.png"), "Save");
+    toolbar->addAction(QIcon(":/icons/delete.png"), "Delete");
+    controlLayout->addWidget(toolbar);
+
+    // ─ 颜色设置
+    QGroupBox* colorGroup = new QGroupBox("颜色");
+    QFormLayout* colorForm = new QFormLayout;
+    QPushButton* bgBtn = new QPushButton(" ");
+    QPushButton* lightBtn = new QPushButton(" ");
+    QPushButton* fgBtn = new QPushButton(" ");
+
+    bgBtn->setStyleSheet("background-color: white");
+    lightBtn->setStyleSheet("background-color: darkred");
+    fgBtn->setStyleSheet("background-color: black");
+
+    colorForm->addRow("背景", bgBtn);
+    colorForm->addRow("光源", lightBtn);
+    colorForm->addRow("前景", fgBtn);
+    colorGroup->setLayout(colorForm);
+    controlLayout->addWidget(colorGroup);
+
+    // ─ OpenGL 设置
+    QGroupBox* oglGroup = new QGroupBox("OpenGL");
+    QVBoxLayout* oglLayout = new QVBoxLayout;
+    oglLayout->addWidget(new QCheckBox("反锯齿"));
+    oglLayout->addWidget(new QCheckBox("Gouraud 着色"));
+    oglLayout->addWidget(new QCheckBox("光照"));
+    QCheckBox* showBackface = new QCheckBox("显示背面");
+    showBackface->setChecked(true);
+    oglLayout->addWidget(showBackface);
+    oglLayout->addWidget(new QRadioButton("点"));
+    QRadioButton* lineRadio = new QRadioButton("线");
+    lineRadio->setChecked(true);
+    oglLayout->addWidget(lineRadio);
+    oglLayout->addWidget(new QRadioButton("面"));
+    oglLayout->addWidget(new QRadioButton("面线混合"));
+    oglGroup->setLayout(oglLayout);
+    controlLayout->addWidget(oglGroup);
+
+    // ─ 动画
+    QGroupBox* animGroup = new QGroupBox("动画");
+    QVBoxLayout* animLayout = new QVBoxLayout;
+    animLayout->addWidget(new QCheckBox("旋转"));
+    animGroup->setLayout(animLayout);
+    controlLayout->addWidget(animGroup);
+
+    controlLayout->addStretch();  // 填充底部空白
+
+    // ➤ 中央区域为 MeshViewer
     meshViewer = new MeshViewerWidget();
-    layout->addWidget(meshViewer);
+    mainLayout->addWidget(controlPanel);
+    mainLayout->addWidget(meshViewer, 1);  // 拉伸占满
 
     setCentralWidget(centralWidget);
-
     createActions();
     createMenus();
-
     setWindowTitle("OpenMesh Viewer");
-    resize(800, 600);
-
+    resize(1000, 600);
     statusBar()->showMessage("Ready");
 }
 
