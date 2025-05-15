@@ -16,9 +16,10 @@
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
 enum RenderMode {
-    Point,
+    //Points,
     Solid,     
-    Wireframe  
+    Wireframe,
+    HiddenLine
 };
 
 using Mesh = OpenMesh::TriMesh_ArrayKernelT<>;

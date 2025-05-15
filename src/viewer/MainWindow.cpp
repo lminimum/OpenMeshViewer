@@ -73,10 +73,11 @@ MainWindow::MainWindow(QWidget* parent)
     oglLayout->addWidget(new QRadioButton("点"));
     QRadioButton* lineRadio = new QRadioButton("线");
 	QRadioButton* faceRadio = new QRadioButton("面");
+	QRadioButton* hiddenLineRadio = new QRadioButton("线面结合");
     lineRadio->setChecked(true);
     oglLayout->addWidget(lineRadio);
     oglLayout->addWidget(faceRadio);
-    oglLayout->addWidget(new QRadioButton("面线混合"));
+    oglLayout->addWidget(hiddenLineRadio);
     oglGroup->setLayout(oglLayout);
     controlLayout->addWidget(oglGroup);
 
@@ -87,6 +88,10 @@ MainWindow::MainWindow(QWidget* parent)
     connect(faceRadio, &QRadioButton::toggled, this, [this](bool checked) {
         if (checked)
             toggleRenderMode(Solid);
+        });
+    connect(hiddenLineRadio, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked)
+            toggleRenderMode(HiddenLine);
         });
 
     // ─ 动画

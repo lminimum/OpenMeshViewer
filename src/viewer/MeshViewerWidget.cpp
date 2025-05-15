@@ -153,27 +153,40 @@ void MeshViewerWidget::updateMeshBuffers()
 
     // 准备索引数据，假设每个面是三角形
     QVector<GLuint> indices;
-    indices.clear();
-    for (Mesh::FaceIter f_it = mesh.faces_begin(); f_it != mesh.faces_end(); ++f_it)
+    if (renderMode == Wireframe || renderMode == HiddenLine)
     {
-        QList<GLuint> faceIndices;
-        for (Mesh::FaceVertexIter fv_it = mesh.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
+        // 线段索引
+        indices.clear();
+        for (Mesh::FaceIter f_it = mesh.faces_begin(); f_it != mesh.faces_end(); ++f_it)
         {
-            faceIndices.append(fv_it->idx());
-        }
-
-        if (faceIndices.size() == 3)
-        {
-            if (renderMode == Wireframe)
+            QList<GLuint> faceIndices;
+            for (Mesh::FaceVertexIter fv_it = mesh.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
             {
-                // 三条边作为线段
+                faceIndices.append(fv_it->idx());
+            }
+
+            if (faceIndices.size() == 3)
+            {
                 indices << faceIndices[0] << faceIndices[1];
                 indices << faceIndices[1] << faceIndices[2];
                 indices << faceIndices[2] << faceIndices[0];
             }
-            else
+        }
+    }
+    else
+    {
+        // 面片索引
+        indices.clear();
+        for (Mesh::FaceIter f_it = mesh.faces_begin(); f_it != mesh.faces_end(); ++f_it)
+        {
+            QList<GLuint> faceIndices;
+            for (Mesh::FaceVertexIter fv_it = mesh.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
             {
-                // 三角面片
+                faceIndices.append(fv_it->idx());
+            }
+
+            if (faceIndices.size() == 3)
+            {
                 indices << faceIndices[0] << faceIndices[1] << faceIndices[2];
             }
         }
@@ -211,56 +224,102 @@ void MeshViewerWidget::updateMeshBuffers()
 
 void MeshViewerWidget::paintGL()
 {
+    qDebug() << "[paintGL] Called";
+
     glClearColor(backgroundColor.redF(), backgroundColor.greenF(), backgroundColor.blueF(), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (!meshLoaded || indexCount == 0)
+    if (!meshLoaded || indexCount == 0) {
+        qDebug() << "[paintGL] No mesh loaded or indexCount == 0";
         return;
+    }
+
+    glEnable(GL_DEPTH_TEST);
 
     QOpenGLShaderProgram* activeProgram = (renderMode == Solid) ? solidProgram : wireframeProgram;
-    if (!activeProgram) return;
+    if (!activeProgram) {
+        qDebug() << "[paintGL] activeProgram is null!";
+        return;
+    }
 
-    activeProgram->bind();
+    bool bindOk = activeProgram->bind();
+    qDebug() << "[paintGL] Shader bind:" << bindOk;
     vao.bind();
 
-    // 模型矩阵：先平移模型中心到原点，平移由translation控制（一般为0）
+    // 设置模型矩阵
     modelMatrix.setToIdentity();
     modelMatrix.translate(translation);
+    qDebug() << "[paintGL] translation:" << translation;
 
-    // 视图矩阵：计算相机位置，绕boundingBoxCenter旋转
+    // 视图矩阵：计算相机位置
     float radius = zoom;
-    // 限制俯仰角避免上下翻转
     float pitch = qBound(-89.0f, rotationX, 89.0f);
     float yaw = rotationY;
-
-    // 计算相机在球面上的坐标
     float camX = boundingBoxCenter.x() + radius * cos(qDegreesToRadians(pitch)) * sin(qDegreesToRadians(yaw));
     float camY = boundingBoxCenter.y() + radius * sin(qDegreesToRadians(pitch));
     float camZ = boundingBoxCenter.z() + radius * cos(qDegreesToRadians(pitch)) * cos(qDegreesToRadians(yaw));
     QVector3D cameraPos(camX, camY, camZ);
-
     viewMatrix.setToIdentity();
     viewMatrix.lookAt(cameraPos, boundingBoxCenter, QVector3D(0, 1, 0));
+    qDebug() << "[paintGL] CameraPos:" << cameraPos;
+    qDebug() << "[paintGL] View Center:" << boundingBoxCenter;
 
+    // 设置 uniform
     activeProgram->setUniformValue("model", modelMatrix);
     activeProgram->setUniformValue("view", viewMatrix);
     activeProgram->setUniformValue("projection", projectionMatrix);
     QVector3D color(foregroundColor.redF(), foregroundColor.greenF(), foregroundColor.blueF());
     activeProgram->setUniformValue("uForegroundColor", color);
 
+    qDebug() << "[paintGL] Render mode:" << renderMode;
+
     if (renderMode == Solid)
     {
+        qDebug() << "[paintGL] Drawing Solid";
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
     }
     else if (renderMode == Wireframe)
     {
+        qDebug() << "[paintGL] Drawing Wireframe";
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glDrawElements(GL_LINES, indexCount, GL_UNSIGNED_INT, 0);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+    else if (renderMode == HiddenLine)
+    {
+        qDebug() << "[paintGL] Drawing HiddenLine";
+
+        // Pass 1: 画填充面（不写颜色，只写深度）——建立深度缓冲
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_POLYGON_OFFSET_FILL); // 推远一点避免冲突
+        glPolygonOffset(1.0f, 1.0f);       // 推远的参数可调试
+
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // 不写颜色
+        glDepthMask(GL_TRUE);                                // 写深度
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+
+        // Pass 2: 画线框（不写深度，只写颜色）——前景覆盖
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);     // 写颜色
+        glDepthMask(GL_FALSE);                               // 不写深度
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glLineWidth(1.0f);
+        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+
+        // 状态恢复
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_DEPTH_TEST);
+    }
+
+
 
     vao.release();
     activeProgram->release();
+
+    qDebug() << "[paintGL] Done.";
 }
 
 void MeshViewerWidget::resizeGL(int width, int height)
@@ -277,15 +336,14 @@ void MeshViewerWidget::resizeGL(int width, int height)
 
 void MeshViewerWidget::toggleRenderMode(RenderMode mode)
 {
-    if (renderMode)
+    if (renderMode != mode)
     {
         renderMode = mode;
+        makeCurrent();
+        updateMeshBuffers();
+        doneCurrent();
+        update();
     }
-    makeCurrent();       
-    updateMeshBuffers();  
-    doneCurrent();
-
-    update(); 
 }
 
 void MeshViewerWidget::mousePressEvent(QMouseEvent* event)
