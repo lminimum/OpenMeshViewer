@@ -298,38 +298,32 @@ void MeshViewerWidget::mouseMoveEvent(QMouseEvent* event)
     QPoint delta = event->pos() - lastMousePosition;
     lastMousePosition = event->pos();
 
-    if (event->buttons() & Qt::LeftButton)
+    if (event->buttons() & Qt::RightButton)
     {
         rotationY += 0.5f * delta.x();
         rotationX += 0.5f * delta.y();
-        rotationX = qBound(-89.0f, rotationX, 89.0f);
+
+        // 限制rotationX，避免翻转过头
+        rotationX = qBound(-90.0f, rotationX, 90.0f);
     }
-    else if (event->buttons() & Qt::RightButton)
+    else if (event->buttons() & Qt::LeftButton)
     {
-        // 计算相机的方向向量
-        float pitch = qDegreesToRadians(rotationX);
-        float yaw = qDegreesToRadians(rotationY);
+        // 根据当前旋转角度计算相机的方向向量
+        QMatrix4x4 rotationMatrix;
+        rotationMatrix.setToIdentity();
+        rotationMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
+        rotationMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
 
-        // 计算相机的前方向
-        QVector3D forward(
-            cos(pitch) * sin(yaw),
-            sin(pitch),
-            cos(pitch) * cos(yaw)
-        );
-        forward.normalize();
-
-        // 计算相机右向量（世界上向量0,1,0叉乘前向量）
-        QVector3D worldUp(0, 1, 0);
-        QVector3D right = QVector3D::crossProduct(forward, worldUp).normalized();
-
-        // 计算相机上向量（右向量叉乘前向量）
-        QVector3D up = QVector3D::crossProduct(right, forward).normalized();
+        // 右方向（相机的局部X轴）
+        QVector3D right = rotationMatrix * QVector3D(1, 0, 0);
+        // 上方向（相机的局部Y轴）
+        QVector3D up = rotationMatrix * QVector3D(0, 1, 0);
 
         float panSpeed = 0.001f * zoom;
 
-        // 用鼠标移动量乘以右向量和上向量，叠加到 translation 上
-        translation -= right * (float)delta.x() * panSpeed;
-        translation -= up * (float)delta.y() * panSpeed;
+        // 鼠标右键拖拽，方向与鼠标移动一致，所以负号表示“拖拽模型跟随鼠标移动”
+        translation += right * delta.x() * panSpeed;
+        translation += -up * delta.y() * panSpeed;
     }
 
     update();
