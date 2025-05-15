@@ -8,7 +8,7 @@ add_executable(OpenMeshViewer
     viewer/OpenMeshViewer.cpp
     viewer/OpenMeshViewer.h
     ${CMAKE_SOURCE_DIR}/resources/resources.qrc
- "viewer/MeshParameterizer.h" "viewer/MeshParameterizer.cpp")
+)
 
 target_link_libraries(OpenMeshViewer
     PRIVATE

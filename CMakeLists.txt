@@ -36,7 +36,5 @@ find_package(OpenMesh REQUIRED)
 link_directories("${OPENMESH_DIR}/lib")  # 供导入库查找
 set(OPENMESH_BIN "${OPENMESH_DIR}")  # 添加 OpenMesh 二进制文件路径变量
 
-# Eigen
-include_directories("${EIGEN_DIR}")
 # ─── 子工程 ──────────────────────────────────────────────────
 add_subdirectory(src)

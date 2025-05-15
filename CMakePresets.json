@@ -7,13 +7,12 @@
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
-          "cacheVariables": {
-            "CMAKE_C_COMPILER": "cl.exe",
-            "CMAKE_CXX_COMPILER": "cl.exe",
-            "QT_DIR": "B:/Env/QT6/6.9.0/msvc2022_64/lib/cmake",
-            "OPENMESH_DIR": "B:/Env/OpenMesh 11.0",
-            "EIGEN_DIR": "B:/Env/eigen-3.4.0"
-          },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "cl.exe",
+                "CMAKE_CXX_COMPILER": "cl.exe",
+                "QT_DIR": "C:/Qt/6.9.0/msvc2022_64/lib/cmake",
+                "OPENMESH_DIR": "C:/Program Files/OpenMesh 11.0"
+            },
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
