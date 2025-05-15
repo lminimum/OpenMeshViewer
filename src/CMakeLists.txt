@@ -5,10 +5,11 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # ─── 可执行文件 ──────────────────────────────────────────────
 add_executable(OpenMeshViewer
-    viewer/OpenMeshViewer.cpp
-    viewer/OpenMeshViewer.h
+    main.cpp
+    viewer/MeshViewerWidget.cpp
+    viewer/MeshViewerWidget.h
     ${CMAKE_SOURCE_DIR}/resources/resources.qrc
-)
+ "viewer/MainWindow.cpp" "viewer/MainWindow.h")
 
 target_link_libraries(OpenMeshViewer
     PRIVATE

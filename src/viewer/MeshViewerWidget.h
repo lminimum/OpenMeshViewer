@@ -23,7 +23,6 @@ enum RenderMode {
     Wireframe  // Wireframe rendering
 };
 
-
 class MeshViewerWidget : public QOpenGLWidget, protected QOpenGLFunctions  
 {  
    Q_OBJECT  
@@ -70,25 +69,4 @@ private:
    QPoint lastMousePosition;  
    float rotationX, rotationY;  
    float zoom;  
-};
-
-// MainWindow class - the application's main window
-class MainWindow : public QMainWindow
-{
-    Q_OBJECT
-
-public:
-    MainWindow(QWidget* parent = nullptr);
-
-private slots:
-    void openFile();
-    void toggleRenderMode();
-
-public slots:
-    void loadDefaultModel();
-
-private:
-    MeshViewerWidget* meshViewer;
-    void createActions();
-    void createMenus();
 };
