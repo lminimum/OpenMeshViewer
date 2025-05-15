@@ -88,15 +88,16 @@ void MeshViewerWidget::resetView()
 void MeshViewerWidget::initializeGL()
 {
     initializeOpenGLFunctions();
-    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
 
-    // Create shader program
-    //program = new QOpenGLShaderProgram();
-     /*
-    program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/Shaders/basic.vert.glsl");
-    program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/Shaders/basic.frag.glsl");
-    program->link();*/
+    // 初始背景色
+    glClearColor(backgroundColor.redF(), backgroundColor.greenF(), backgroundColor.blueF(), 1.0f);
+
+    GLfloat lightPos[] = { 0.0f, 0.0f, 1.0f, 0.0f };
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 
     solidProgram = new QOpenGLShaderProgram();
     solidProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/Shaders/solid.vert.glsl");
@@ -204,7 +205,21 @@ void MeshViewerWidget::updateMeshBuffers()
 
 void MeshViewerWidget::paintGL()
 {
+    // 应用背景色
+    glClearColor(backgroundColor.redF(), backgroundColor.greenF(), backgroundColor.blueF(), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // 设置光源颜色
+    GLfloat diffuse[] = {
+        lightColor.redF(),
+        lightColor.greenF(),
+        lightColor.blueF(),
+        1.0f
+    };
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+
+    // 设置前景颜色（绘制网格时使用）
+    glColor3f(foregroundColor.redF(), foregroundColor.greenF(), foregroundColor.blueF());
 
     if (!meshLoaded)
         return;
@@ -311,3 +326,22 @@ void MeshViewerWidget::keyPressEvent(QKeyEvent* event)
         resetView();
     }
 }
+
+void MeshViewerWidget::setBackgroundColor(const QColor& color)
+{
+    backgroundColor = color;
+    update();  // 请求重绘
+}
+
+void MeshViewerWidget::setLightColor(const QColor& color)
+{
+    lightColor = color;
+    update();
+}
+
+void MeshViewerWidget::setForegroundColor(const QColor& color)
+{
+    foregroundColor = color;
+    update();
+}
+

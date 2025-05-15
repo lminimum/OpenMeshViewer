@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QPushButton>
 
 class MeshViewerWidget;
 
@@ -15,12 +16,19 @@ public:
 private slots:
     void openFile();
     void toggleRenderMode();
+    void chooseBackgroundColor();
+    void chooseLightColor();
+    void chooseForegroundColor();
 
 private:
     void createActions();
     void createMenus();
 
     MeshViewerWidget* meshViewer;
+
+    QPushButton* bgColorButton;
+    QPushButton* lightColorButton;
+    QPushButton* fgColorButton;
 };
 
 #endif // MAINWINDOW_H

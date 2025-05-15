@@ -24,33 +24,36 @@ MainWindow::MainWindow(QWidget* parent)
     QWidget* centralWidget = new QWidget();
     QHBoxLayout* mainLayout = new QHBoxLayout(centralWidget);
 
-    // ➤ 左侧控件面板
     QWidget* controlPanel = new QWidget;
     QVBoxLayout* controlLayout = new QVBoxLayout(controlPanel);
 
-    // ─ 工具栏（用按钮模拟）
     QToolBar* toolbar = new QToolBar;
-    toolbar->addAction(QIcon(":/icons/open.png"), "Open");
-    toolbar->addAction(QIcon(":/icons/save.png"), "Save");
-    toolbar->addAction(QIcon(":/icons/delete.png"), "Delete");
+    toolbar->addAction("Open");
+    toolbar->addAction("Save");
+    toolbar->addAction("Delete");
     controlLayout->addWidget(toolbar);
 
     // ─ 颜色设置
     QGroupBox* colorGroup = new QGroupBox("颜色");
     QFormLayout* colorForm = new QFormLayout;
-    QPushButton* bgBtn = new QPushButton(" ");
-    QPushButton* lightBtn = new QPushButton(" ");
-    QPushButton* fgBtn = new QPushButton(" ");
+    bgColorButton = new QPushButton(" ");
+    lightColorButton = new QPushButton(" ");
+    fgColorButton = new QPushButton(" ");
 
-    bgBtn->setStyleSheet("background-color: white");
-    lightBtn->setStyleSheet("background-color: darkred");
-    fgBtn->setStyleSheet("background-color: black");
+    bgColorButton->setStyleSheet("background-color: black");
+    lightColorButton->setStyleSheet("background-color: darkred");
+    fgColorButton->setStyleSheet("background-color: white");
 
-    colorForm->addRow("背景", bgBtn);
-    colorForm->addRow("光源", lightBtn);
-    colorForm->addRow("前景", fgBtn);
+    colorForm->addRow("背景", bgColorButton);
+    colorForm->addRow("光源", lightColorButton);
+    colorForm->addRow("前景", fgColorButton);
     colorGroup->setLayout(colorForm);
     controlLayout->addWidget(colorGroup);
+
+    // 连接槽函数
+    connect(bgColorButton, &QPushButton::clicked, this, &MainWindow::chooseBackgroundColor);
+    connect(lightColorButton, &QPushButton::clicked, this, &MainWindow::chooseLightColor);
+    connect(fgColorButton, &QPushButton::clicked, this, &MainWindow::chooseForegroundColor);
 
     // ─ OpenGL 设置
     QGroupBox* oglGroup = new QGroupBox("OpenGL");
@@ -79,7 +82,6 @@ MainWindow::MainWindow(QWidget* parent)
 
     controlLayout->addStretch();  // 填充底部空白
 
-    // ➤ 中央区域为 MeshViewer
     meshViewer = new MeshViewerWidget();
     mainLayout->addWidget(controlPanel);
     mainLayout->addWidget(meshViewer, 1);  // 拉伸占满
@@ -171,4 +173,31 @@ void MainWindow::toggleRenderMode()
     }
 
     statusBar()->showMessage("Render mode toggled", 2000);
+}
+
+void MainWindow::chooseBackgroundColor()
+{
+    QColor color = QColorDialog::getColor(Qt::black, this, "选择背景颜色");
+    if (color.isValid()) {
+        bgColorButton->setStyleSheet(QString("background-color: %1").arg(color.name()));
+        meshViewer->setBackgroundColor(color);  
+    }
+}
+
+void MainWindow::chooseLightColor()
+{
+    QColor color = QColorDialog::getColor(Qt::red, this, "选择光源颜色");
+    if (color.isValid()) {
+        lightColorButton->setStyleSheet(QString("background-color: %1").arg(color.name()));
+        meshViewer->setLightColor(color);  
+    }
+}
+
+void MainWindow::chooseForegroundColor()
+{
+    QColor color = QColorDialog::getColor(Qt::white, this, "选择前景颜色");
+    if (color.isValid()) {
+        fgColorButton->setStyleSheet(QString("background-color: %1").arg(color.name()));
+        meshViewer->setForegroundColor(color); 
+    }
 }
