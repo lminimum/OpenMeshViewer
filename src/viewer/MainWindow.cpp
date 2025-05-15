@@ -1,5 +1,4 @@
 ﻿#include "MainWindow.h"
-#include "MeshViewerWidget.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -28,10 +27,17 @@ MainWindow::MainWindow(QWidget* parent)
     QVBoxLayout* controlLayout = new QVBoxLayout(controlPanel);
 
     QToolBar* toolbar = new QToolBar;
-    toolbar->addAction("Open");
-    toolbar->addAction("Save");
-    toolbar->addAction("Delete");
+
+    QAction* openAction = toolbar->addAction("Open");
+    QAction* saveAction = toolbar->addAction("Save");
+    QAction* deleteAction = toolbar->addAction("Delete");
+
     controlLayout->addWidget(toolbar);
+
+    // 连接动作到槽函数
+    connect(openAction, &QAction::triggered, this, &MainWindow::openFile);
+    connect(saveAction, &QAction::triggered, this, &MainWindow::saveFile);
+    connect(deleteAction, &QAction::triggered, this, &MainWindow::deleteMesh);
 
     // ─ 颜色设置
     QGroupBox* colorGroup = new QGroupBox("颜色");
@@ -66,12 +72,22 @@ MainWindow::MainWindow(QWidget* parent)
     oglLayout->addWidget(showBackface);
     oglLayout->addWidget(new QRadioButton("点"));
     QRadioButton* lineRadio = new QRadioButton("线");
+	QRadioButton* faceRadio = new QRadioButton("面");
     lineRadio->setChecked(true);
     oglLayout->addWidget(lineRadio);
-    oglLayout->addWidget(new QRadioButton("面"));
+    oglLayout->addWidget(faceRadio);
     oglLayout->addWidget(new QRadioButton("面线混合"));
     oglGroup->setLayout(oglLayout);
     controlLayout->addWidget(oglGroup);
+
+    connect(lineRadio, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked)
+            toggleRenderMode(Wireframe);
+        });
+    connect(faceRadio, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked)
+            toggleRenderMode(Solid);
+        });
 
     // ─ 动画
     QGroupBox* animGroup = new QGroupBox("动画");
@@ -109,11 +125,6 @@ void MainWindow::createActions()
     exitAction->setShortcut(QKeySequence::Quit);
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
     fileMenu->addAction(exitAction);
-
-    QMenu* toggleMenu = menuBar()->addMenu("&Toggle");
-    QAction* toggleRenderModeAction = new QAction("Toggle Render Mode", this);
-    connect(toggleRenderModeAction, &QAction::triggered, this, &MainWindow::toggleRenderMode);
-    toggleMenu->addAction(toggleRenderModeAction);
 }
 
 void MainWindow::createMenus()
@@ -142,6 +153,38 @@ void MainWindow::openFile()
     }
 }
 
+void MainWindow::saveFile()
+{
+    if (!meshViewer || !meshViewer->isMeshLoaded()) {
+        QMessageBox::warning(this, "Warning", "No mesh to save.");
+        return;
+    }
+
+    QString filename = QFileDialog::getSaveFileName(
+        this, "Save Mesh", "", "OBJ Files (*.obj);;OFF Files (*.off);;PLY Files (*.ply);;STL Files (*.stl)");
+
+    if (filename.isEmpty())
+        return;
+
+    if (meshViewer->saveMesh(filename)) {
+        statusBar()->showMessage("Mesh saved successfully", 3000);
+    }
+    else {
+        QMessageBox::critical(this, "Error", "Failed to save the mesh.");
+    }
+}
+
+void MainWindow::deleteMesh()
+{
+    if (!meshViewer || !meshViewer->isMeshLoaded()) {
+        QMessageBox::warning(this, "Warning", "No mesh loaded.");
+        return;
+    }
+
+    meshViewer->clearMesh();
+    statusBar()->showMessage("Mesh deleted", 3000);
+}
+
 void MainWindow::loadDefaultModel()
 {
     QFile resourceFile(":/models/Models/Dino.ply");
@@ -165,11 +208,11 @@ void MainWindow::loadDefaultModel()
     }
 }
 
-void MainWindow::toggleRenderMode()
+void MainWindow::toggleRenderMode(RenderMode mode)
 {
     if (meshViewer)
     {
-        meshViewer->toggleRenderMode();
+        meshViewer->toggleRenderMode( mode);
     }
 
     statusBar()->showMessage("Render mode toggled", 2000);

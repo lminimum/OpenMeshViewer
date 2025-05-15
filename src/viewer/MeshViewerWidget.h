@@ -16,6 +16,7 @@
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
 enum RenderMode {
+    Point,
     Solid,     
     Wireframe  
 };
@@ -29,9 +30,12 @@ public:
     explicit MeshViewerWidget(QWidget* parent = nullptr);
     ~MeshViewerWidget() override;
 
+    bool isMeshLoaded() const;
     bool loadMesh(const QString& filename);
     void resetView();
-    void toggleRenderMode();
+	void clearMesh();
+    bool saveMesh(const QString& filename);
+    void toggleRenderMode(RenderMode mode);
     void setBackgroundColor(const QColor& color);
     void setLightColor(const QColor& color);
 	void setForegroundColor(const QColor& color);
@@ -51,6 +55,7 @@ protected:
 
 private:
     void updateMeshBuffers(); 
+    void centerAndScaleMesh();
 
     QOpenGLShaderProgram* solidProgram = nullptr;   
     QOpenGLShaderProgram* wireframeProgram = nullptr;
@@ -63,14 +68,15 @@ private:
     QColor backgroundColor = Qt::black;
     QColor lightColor = Qt::red;
     QColor foregroundColor = Qt::white;
-    int indexCount = 0;        
+    int indexCount = 0;
 
     QMatrix4x4 modelMatrix;     
     QMatrix4x4 viewMatrix;      
     QMatrix4x4 projectionMatrix;
 
-    QPoint lastMousePosition;  
+    QPoint lastMousePosition;
+    float boundingBoxDiameter = 1.0f;
     float rotationX = 0.0f;  
     float rotationY = 0.0f;     
-    float zoom = 1.0f;      
+    float zoom = 1.0f;
 };

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QPushButton>
+#include "MeshViewerWidget.h"
 
 class MeshViewerWidget;
 
@@ -14,8 +15,10 @@ public:
     void loadDefaultModel();
 
 private slots:
+    void toggleRenderMode(RenderMode mode);
     void openFile();
-    void toggleRenderMode();
+	void deleteMesh();
+	void saveFile();
     void chooseBackgroundColor();
     void chooseLightColor();
     void chooseForegroundColor();

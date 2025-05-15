@@ -70,6 +70,7 @@ bool MeshViewerWidget::loadMesh(const QString &filename)
         doneCurrent();
     }
 
+    centerAndScaleMesh(); 
     resetView();
     update();
 
@@ -80,7 +81,11 @@ void MeshViewerWidget::resetView()
 {
     rotationX = 0.0f;
     rotationY = 0.0f;
-    zoom = 5.0f;
+
+    // 缩放距离根据模型大小设置
+    zoom = boundingBoxDiameter * 1.2f;
+
+    // 平移重置
     translation = QVector3D(0.0f, 0.0f, 0.0f);
 
     update();
@@ -219,7 +224,7 @@ void MeshViewerWidget::paintGL()
     };
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
 
-    if (!meshLoaded)
+    if (!meshLoaded || indexCount == 0)
         return;
 
     QOpenGLShaderProgram* activeProgram = (renderMode == Solid) ? solidProgram : wireframeProgram;
@@ -262,22 +267,22 @@ void MeshViewerWidget::paintGL()
 
 void MeshViewerWidget::resizeGL(int width, int height)
 {
-    // Update projection matrix
+    float nearPlane = boundingBoxDiameter * 0.01f;
+    float farPlane = boundingBoxDiameter * 50.0f;
+
+    nearPlane = std::max(0.01f, nearPlane);
+    farPlane = std::max(nearPlane + 1.0f, farPlane);
+
     projectionMatrix.setToIdentity();
-    projectionMatrix.perspective(45.0f, width / float(height), 0.1f, 100.0f);
+    projectionMatrix.perspective(45.0f, width / float(height), nearPlane, farPlane);
 }
 
-void MeshViewerWidget::toggleRenderMode()
+void MeshViewerWidget::toggleRenderMode(RenderMode mode)
 {
-    if (renderMode == Solid)
+    if (renderMode)
     {
-        renderMode = Wireframe;
+        renderMode = mode;
     }
-    else
-    {
-        renderMode = Solid;
-    }
-
     makeCurrent();       
     updateMeshBuffers();  
     doneCurrent();
@@ -312,9 +317,10 @@ void MeshViewerWidget::mouseMoveEvent(QMouseEvent* event)
 
 void MeshViewerWidget::wheelEvent(QWheelEvent* event)
 {
-    float zoomStep = 0.2f; 
-    zoom -= zoomStep * (event->angleDelta().y() / 120.0f);
-    zoom = qBound(0.1f, zoom, 50.0f);  
+    float baseStep = boundingBoxDiameter * 0.02f; 
+    zoom -= baseStep * (event->angleDelta().y() / 120.0f);
+
+    zoom = qBound(boundingBoxDiameter * 0.1f, zoom, boundingBoxDiameter * 10.0f);
 
     update();
 }
@@ -342,5 +348,71 @@ void MeshViewerWidget::setLightColor(const QColor& color)
 void MeshViewerWidget::setForegroundColor(const QColor& color)
 {
     foregroundColor = color;
+    update();
+}
+
+bool MeshViewerWidget::saveMesh(const QString& filename)  
+{  
+   // 使用 OpenMesh 保存  
+   try {  
+       return OpenMesh::IO::write_mesh(mesh, filename.toStdString());  
+   }  
+   catch (...) {  
+       return false;  
+   }  
+}   
+
+void MeshViewerWidget::clearMesh()
+{
+    mesh.clear();
+    meshLoaded = false;
+    indexCount = 0;
+
+    makeCurrent();
+    vao.bind();
+    vertexBuffer.bind();
+    vertexBuffer.allocate(nullptr, 0); // 清空 GPU 缓冲区
+    indexBuffer.bind();
+    indexBuffer.allocate(nullptr, 0);
+    vao.release();
+    doneCurrent();
+
+    update(); // 触发重绘
+}
+
+bool MeshViewerWidget::isMeshLoaded() const
+{
+    return meshLoaded;
+}
+
+void MeshViewerWidget::centerAndScaleMesh()
+{
+    if (!meshLoaded)
+        return;
+
+    OpenMesh::Vec3f minPt(std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::max());
+    OpenMesh::Vec3f maxPt(std::numeric_limits<float>::lowest(),
+        std::numeric_limits<float>::lowest(),
+        std::numeric_limits<float>::lowest());
+
+    for (auto v_it = mesh.vertices_begin(); v_it != mesh.vertices_end(); ++v_it)
+    {
+        auto p = mesh.point(*v_it);
+        minPt.minimize(p);
+        maxPt.maximize(p);
+    }
+
+    OpenMesh::Vec3f center = (minPt + maxPt) * 0.5f;
+    boundingBoxDiameter = (maxPt - minPt).length();
+    if (boundingBoxDiameter < 1e-6f) {
+        boundingBoxDiameter = 1.0f;
+    }
+
+    translation = -QVector3D(center[0], center[1], center[2]);
+
+    zoom = boundingBoxDiameter * 1.2f; 
+
     update();
 }
