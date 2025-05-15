@@ -15,12 +15,14 @@
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
+// Define the mesh type
 typedef OpenMesh::TriMesh_ArrayKernelT<> Mesh;
 
 enum RenderMode {
-    Solid,
-    Wireframe  
+    Solid,  // Normal rendering
+    Wireframe  // Wireframe rendering
 };
+
 
 class MeshViewerWidget : public QOpenGLWidget, protected QOpenGLFunctions  
 {  
@@ -32,9 +34,8 @@ public:
 
    bool loadMesh(const QString& filename);  
    void resetView();  
-   void toggleUVView();
    void toggleRenderMode();  
-   QVector3D translation;
+   QVector3D translation;  // 模型平移
 
    RenderMode renderMode = Solid;
 
@@ -46,15 +47,14 @@ protected:
    void mousePressEvent(QMouseEvent* event) override;  
    void mouseMoveEvent(QMouseEvent* event) override;  
    void wheelEvent(QWheelEvent* event) override;  
-   void parameterizeMesh();
 
 private:  
    void updateMeshBuffers();  
-   
-   bool showUV = false;
+
    Mesh mesh;  
    bool meshLoaded;  
 
+   //QOpenGLShaderProgram* program;  
    QOpenGLShaderProgram* solidProgram = nullptr;
    QOpenGLShaderProgram* wireframeProgram = nullptr;
 
@@ -72,6 +72,7 @@ private:
    float zoom;  
 };
 
+// MainWindow class - the application's main window
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
