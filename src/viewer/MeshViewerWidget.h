@@ -76,6 +76,7 @@ private:
 
     QPoint lastMousePosition;
     float boundingBoxDiameter = 1.0f;
+    QVector3D boundingBoxCenter;
     float rotationX = 0.0f;  
     float rotationY = 0.0f;     
     float zoom = 1.0f;

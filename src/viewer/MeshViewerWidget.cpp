@@ -211,18 +211,8 @@ void MeshViewerWidget::updateMeshBuffers()
 
 void MeshViewerWidget::paintGL()
 {
-    // 应用背景色
     glClearColor(backgroundColor.redF(), backgroundColor.greenF(), backgroundColor.blueF(), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // 设置光源颜色
-    GLfloat diffuse[] = {
-        lightColor.redF(),
-        lightColor.greenF(),
-        lightColor.blueF(),
-        1.0f
-    };
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
 
     if (!meshLoaded || indexCount == 0)
         return;
@@ -233,16 +223,24 @@ void MeshViewerWidget::paintGL()
     activeProgram->bind();
     vao.bind();
 
+    // 模型矩阵：先平移模型中心到原点，平移由translation控制（一般为0）
     modelMatrix.setToIdentity();
     modelMatrix.translate(translation);
-    modelMatrix.rotate(rotationX, 1.0f, 0.0f, 0.0f);
-    modelMatrix.rotate(rotationY, 0.0f, 1.0f, 0.0f);
+
+    // 视图矩阵：计算相机位置，绕boundingBoxCenter旋转
+    float radius = zoom;
+    // 限制俯仰角避免上下翻转
+    float pitch = qBound(-89.0f, rotationX, 89.0f);
+    float yaw = rotationY;
+
+    // 计算相机在球面上的坐标
+    float camX = boundingBoxCenter.x() + radius * cos(qDegreesToRadians(pitch)) * sin(qDegreesToRadians(yaw));
+    float camY = boundingBoxCenter.y() + radius * sin(qDegreesToRadians(pitch));
+    float camZ = boundingBoxCenter.z() + radius * cos(qDegreesToRadians(pitch)) * cos(qDegreesToRadians(yaw));
+    QVector3D cameraPos(camX, camY, camZ);
 
     viewMatrix.setToIdentity();
-    viewMatrix.lookAt(
-        QVector3D(0, 0, zoom),  
-        QVector3D(0, 0, 0),     
-        QVector3D(0, 1, 0));   
+    viewMatrix.lookAt(cameraPos, boundingBoxCenter, QVector3D(0, 1, 0));
 
     activeProgram->setUniformValue("model", modelMatrix);
     activeProgram->setUniformValue("view", viewMatrix);
@@ -304,12 +302,34 @@ void MeshViewerWidget::mouseMoveEvent(QMouseEvent* event)
     {
         rotationY += 0.5f * delta.x();
         rotationX += 0.5f * delta.y();
+        rotationX = qBound(-89.0f, rotationX, 89.0f);
     }
     else if (event->buttons() & Qt::RightButton)
     {
-        float panSpeed = 0.001f * zoom; 
+        // 计算相机的方向向量
+        float pitch = qDegreesToRadians(rotationX);
+        float yaw = qDegreesToRadians(rotationY);
 
-        translation -= QVector3D(-delta.x() * panSpeed, delta.y() * panSpeed, 0.0f);
+        // 计算相机的前方向
+        QVector3D forward(
+            cos(pitch) * sin(yaw),
+            sin(pitch),
+            cos(pitch) * cos(yaw)
+        );
+        forward.normalize();
+
+        // 计算相机右向量（世界上向量0,1,0叉乘前向量）
+        QVector3D worldUp(0, 1, 0);
+        QVector3D right = QVector3D::crossProduct(forward, worldUp).normalized();
+
+        // 计算相机上向量（右向量叉乘前向量）
+        QVector3D up = QVector3D::crossProduct(right, forward).normalized();
+
+        float panSpeed = 0.001f * zoom;
+
+        // 用鼠标移动量乘以右向量和上向量，叠加到 translation 上
+        translation -= right * (float)delta.x() * panSpeed;
+        translation -= up * (float)delta.y() * panSpeed;
     }
 
     update();
@@ -317,11 +337,9 @@ void MeshViewerWidget::mouseMoveEvent(QMouseEvent* event)
 
 void MeshViewerWidget::wheelEvent(QWheelEvent* event)
 {
-    float baseStep = boundingBoxDiameter * 0.02f; 
+    float baseStep = boundingBoxDiameter * 0.02f;
     zoom -= baseStep * (event->angleDelta().y() / 120.0f);
-
-    zoom = qBound(boundingBoxDiameter * 0.1f, zoom, boundingBoxDiameter * 10.0f);
-
+    zoom = qBound(boundingBoxDiameter * 0.1f, zoom, boundingBoxDiameter * 50.0f);
     update();
 }
 
@@ -405,14 +423,16 @@ void MeshViewerWidget::centerAndScaleMesh()
     }
 
     OpenMesh::Vec3f center = (minPt + maxPt) * 0.5f;
+    boundingBoxCenter = QVector3D(center[0], center[1], center[2]);
     boundingBoxDiameter = (maxPt - minPt).length();
     if (boundingBoxDiameter < 1e-6f) {
         boundingBoxDiameter = 1.0f;
     }
 
-    translation = -QVector3D(center[0], center[1], center[2]);
+    // translation = -boundingBoxCenter; // 不要平移模型，模型保持原点
+    translation = QVector3D(0, 0, 0);
 
-    zoom = boundingBoxDiameter * 1.2f; 
+    zoom = boundingBoxDiameter * 1.2f;
 
     update();
 }
