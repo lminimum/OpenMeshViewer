@@ -266,7 +266,7 @@ void MeshViewerWidget::paintGL()
 void MeshViewerWidget::resizeGL(int width, int height)
 {
     float nearPlane = boundingBoxDiameter * 0.01f;
-    float farPlane = boundingBoxDiameter * 50.0f;
+    float farPlane = boundingBoxDiameter * 10000.0f;
 
     nearPlane = std::max(0.01f, nearPlane);
     farPlane = std::max(nearPlane + 1.0f, farPlane);
@@ -429,4 +429,5 @@ void MeshViewerWidget::centerAndScaleMesh()
     zoom = boundingBoxDiameter * 1.2f;
 
     update();
+
 }

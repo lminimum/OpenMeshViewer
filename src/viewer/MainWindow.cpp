@@ -191,7 +191,7 @@ void MainWindow::deleteMesh()
 
 void MainWindow::loadDefaultModel()
 {
-    QFile resourceFile(":/models/Models/Dino.ply");
+    QFile resourceFile(":/models/Models/King.ply");
     if (resourceFile.open(QIODevice::ReadOnly))
     {
         QByteArray data = resourceFile.readAll();
