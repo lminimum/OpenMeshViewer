@@ -37,7 +37,7 @@ public:
 	void setForegroundColor(const QColor& color);
 
     QVector3D translation;    
-    RenderMode renderMode = Wireframe;
+    RenderMode renderMode;
 
 protected:
     void initializeGL() override;

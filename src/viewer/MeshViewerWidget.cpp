@@ -19,7 +19,8 @@ MeshViewerWidget::MeshViewerWidget(QWidget *parent)
       rotationX(0.0f),
       rotationY(0.0f),
       zoom(5.0f),
-      indexCount(0)
+      indexCount(0),
+	  renderMode(Wireframe)
 {
     setFocusPolicy(Qt::StrongFocus);
 }
@@ -218,9 +219,6 @@ void MeshViewerWidget::paintGL()
     };
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
 
-    // 设置前景颜色（绘制网格时使用）
-    glColor3f(foregroundColor.redF(), foregroundColor.greenF(), foregroundColor.blueF());
-
     if (!meshLoaded)
         return;
 
@@ -244,6 +242,8 @@ void MeshViewerWidget::paintGL()
     activeProgram->setUniformValue("model", modelMatrix);
     activeProgram->setUniformValue("view", viewMatrix);
     activeProgram->setUniformValue("projection", projectionMatrix);
+    QVector3D color(foregroundColor.redF(), foregroundColor.greenF(), foregroundColor.blueF());
+    activeProgram->setUniformValue("uForegroundColor", color);
 
     if (renderMode == Solid)
     {
@@ -344,4 +344,3 @@ void MeshViewerWidget::setForegroundColor(const QColor& color)
     foregroundColor = color;
     update();
 }
-
