@@ -22,6 +22,7 @@ private slots:
     void chooseBackgroundColor();
     void chooseLightColor();
     void chooseForegroundColor();
+    void remeshMesh();
 
 private:
     void createActions();
@@ -34,4 +35,4 @@ private:
     QPushButton* fgColorButton;
 };
 
-#endif // MAINWINDOW_H
+#endif

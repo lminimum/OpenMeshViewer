@@ -27,6 +27,10 @@ class MeshViewerWidget : public QOpenGLWidget, protected QOpenGLFunctions {
     Q_OBJECT
 
 public:
+    Mesh& getMesh() {
+        return mesh;
+    }
+
     explicit MeshViewerWidget(QWidget* parent = nullptr);
     ~MeshViewerWidget() override;
 

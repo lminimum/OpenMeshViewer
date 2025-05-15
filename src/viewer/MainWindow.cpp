@@ -1,5 +1,5 @@
 ﻿#include "MainWindow.h"
-
+#include "algorithm/IsotropicRemesher.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -96,6 +96,10 @@ MainWindow::MainWindow(QWidget* parent)
     animGroup->setLayout(animLayout);
     controlLayout->addWidget(animGroup);
 
+    QPushButton* remeshButton = new QPushButton("Remesh");
+    controlLayout->addWidget(remeshButton);
+
+    connect(remeshButton, &QPushButton::clicked, this, &MainWindow::remeshMesh);
     controlLayout->addStretch();  // 填充底部空白
 
     meshViewer = new MeshViewerWidget();
@@ -243,4 +247,19 @@ void MainWindow::chooseForegroundColor()
         fgColorButton->setStyleSheet(QString("background-color: %1").arg(color.name()));
         meshViewer->setForegroundColor(color); 
     }
+}
+
+void MainWindow::remeshMesh()
+{
+    if (!meshViewer->isMeshLoaded()) {
+        QMessageBox::warning(this, "提示", "请先加载一个网格");
+        return;
+    }
+
+    Mesh& mesh = meshViewer->getMesh();
+    IsotropicRemesher remesher(mesh);
+    remesher.remesh();  
+
+    meshViewer->update(); 
+    QMessageBox::information(this, "完成", "Remesh 操作已成功完成！");
 }
