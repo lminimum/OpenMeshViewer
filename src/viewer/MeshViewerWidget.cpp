@@ -153,7 +153,7 @@ void MeshViewerWidget::updateMeshBuffers()
 
     // 准备索引数据，假设每个面是三角形
     QVector<GLuint> indices;
-    if (renderMode == Wireframe || renderMode == HiddenLine)
+    if (renderMode == Wireframe)
     {
         // 线段索引
         indices.clear();
@@ -279,7 +279,6 @@ void MeshViewerWidget::paintGL()
     //暂未实现
     else if (renderMode == HiddenLine)
     {
-        qDebug() << "[paintGL] Drawing HiddenLine";
 
         // Pass 1: 画填充面（不写颜色，只写深度）——建立深度缓冲
         glEnable(GL_DEPTH_TEST);
