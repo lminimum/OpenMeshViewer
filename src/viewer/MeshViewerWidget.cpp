@@ -224,13 +224,11 @@ void MeshViewerWidget::updateMeshBuffers()
 
 void MeshViewerWidget::paintGL()
 {
-    qDebug() << "[paintGL] Called";
 
     glClearColor(backgroundColor.redF(), backgroundColor.greenF(), backgroundColor.blueF(), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (!meshLoaded || indexCount == 0) {
-        qDebug() << "[paintGL] No mesh loaded or indexCount == 0";
         return;
     }
 
@@ -238,18 +236,15 @@ void MeshViewerWidget::paintGL()
 
     QOpenGLShaderProgram* activeProgram = (renderMode == Solid) ? solidProgram : wireframeProgram;
     if (!activeProgram) {
-        qDebug() << "[paintGL] activeProgram is null!";
         return;
     }
 
     bool bindOk = activeProgram->bind();
-    qDebug() << "[paintGL] Shader bind:" << bindOk;
     vao.bind();
 
     // 设置模型矩阵
     modelMatrix.setToIdentity();
     modelMatrix.translate(translation);
-    qDebug() << "[paintGL] translation:" << translation;
 
     // 视图矩阵：计算相机位置
     float radius = zoom;
@@ -261,8 +256,6 @@ void MeshViewerWidget::paintGL()
     QVector3D cameraPos(camX, camY, camZ);
     viewMatrix.setToIdentity();
     viewMatrix.lookAt(cameraPos, boundingBoxCenter, QVector3D(0, 1, 0));
-    qDebug() << "[paintGL] CameraPos:" << cameraPos;
-    qDebug() << "[paintGL] View Center:" << boundingBoxCenter;
 
     // 设置 uniform
     activeProgram->setUniformValue("model", modelMatrix);
@@ -271,21 +264,19 @@ void MeshViewerWidget::paintGL()
     QVector3D color(foregroundColor.redF(), foregroundColor.greenF(), foregroundColor.blueF());
     activeProgram->setUniformValue("uForegroundColor", color);
 
-    qDebug() << "[paintGL] Render mode:" << renderMode;
 
     if (renderMode == Solid)
     {
-        qDebug() << "[paintGL] Drawing Solid";
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
     }
     else if (renderMode == Wireframe)
     {
-        qDebug() << "[paintGL] Drawing Wireframe";
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glDrawElements(GL_LINES, indexCount, GL_UNSIGNED_INT, 0);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+    //暂未实现
     else if (renderMode == HiddenLine)
     {
         qDebug() << "[paintGL] Drawing HiddenLine";
@@ -314,12 +305,8 @@ void MeshViewerWidget::paintGL()
         glEnable(GL_DEPTH_TEST);
     }
 
-
-
     vao.release();
     activeProgram->release();
-
-    qDebug() << "[paintGL] Done.";
 }
 
 void MeshViewerWidget::resizeGL(int width, int height)
@@ -441,13 +428,13 @@ void MeshViewerWidget::clearMesh()
     makeCurrent();
     vao.bind();
     vertexBuffer.bind();
-    vertexBuffer.allocate(nullptr, 0); // 清空 GPU 缓冲区
+    vertexBuffer.allocate(nullptr, 0);
     indexBuffer.bind();
     indexBuffer.allocate(nullptr, 0);
     vao.release();
     doneCurrent();
 
-    update(); // 触发重绘
+    update();
 }
 
 bool MeshViewerWidget::isMeshLoaded() const
@@ -481,7 +468,6 @@ void MeshViewerWidget::centerAndScaleMesh()
         boundingBoxDiameter = 1.0f;
     }
 
-    // translation = -boundingBoxCenter; // 不要平移模型，模型保持原点
     translation = QVector3D(0, 0, 0);
 
     zoom = boundingBoxDiameter * 1.2f;

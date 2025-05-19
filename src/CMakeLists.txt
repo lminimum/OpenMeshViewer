@@ -9,7 +9,7 @@ add_executable(OpenMeshViewer
     viewer/MeshViewerWidget.cpp
     viewer/MeshViewerWidget.h
     ${CMAKE_SOURCE_DIR}/resources/resources.qrc
- "viewer/MainWindow.cpp" "viewer/MainWindow.h" "algorithm/IsotropicRemesher.cpp" "algorithm/IsotropicRemesher.h")
+ "viewer/MainWindow.cpp" "viewer/MainWindow.h" "algorithm/IsotropicRemesher.cpp" "algorithm/IsotropicRemesher.h" "algorithm/MeshUtils.h")
 
 target_link_libraries(OpenMeshViewer
     PRIVATE

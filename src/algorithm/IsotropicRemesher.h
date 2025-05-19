@@ -1,11 +1,23 @@
-﻿#pragma once
+﻿#ifndef ISOTROPIC_REMESHER_H
+#define ISOTROPIC_REMESHER_H
 
 #include "../viewer/MeshViewerWidget.h"  
+
 class IsotropicRemesher {
 public:
-    explicit IsotropicRemesher(Mesh& mesh);
-    void remesh(int iterations = 3);
+    IsotropicRemesher(Mesh& mesh);
+    void remesh();
 
 private:
     Mesh& mesh_;
+    float minLength_;
+    float maxLength_;
+    int maxIter_;
+
+    void splitLongEdges();
+    void collapseShortEdges();
+    void flipEdges();
+    void smoothTangential();
 };
+
+#endif // ISOTROPIC_REMESHER_H
