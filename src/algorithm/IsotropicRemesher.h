@@ -10,8 +10,8 @@ public:
 
 private:
     Mesh& mesh_;
-    float minLength_;
-    float maxLength_;
+    float targetMin_;
+    float targetMax_;
     int maxIter_;
 
     void splitLongEdges();

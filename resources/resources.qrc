@@ -10,5 +10,6 @@
 		<file>Models/Dino.ply</file>
 		<file>Models/Bunny.ply</file>
 		<file>Models/King.ply</file>
+		<file>Models/Horse.ply</file>
 	</qresource>
 </RCC>
