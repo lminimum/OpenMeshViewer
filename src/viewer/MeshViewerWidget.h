@@ -35,6 +35,7 @@ public:
     explicit MeshViewerWidget(QWidget* parent = nullptr);
     ~MeshViewerWidget() override;
 
+    void updateMeshBuffers(); 
     bool isMeshLoaded() const;
     bool loadMesh(const QString& filename);
     void resetView();
@@ -59,7 +60,6 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    void updateMeshBuffers(); 
     void centerAndScaleMesh();
 
     QOpenGLShaderProgram* solidProgram = nullptr;   

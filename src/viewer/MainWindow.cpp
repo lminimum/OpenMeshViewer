@@ -283,10 +283,11 @@ void MainWindow::remeshMesh()
         return;
     }
 
-    Mesh& mesh = meshViewer->getMesh();
+    Mesh& mesh = meshViewer->getMesh();  
     IsotropicRemesher remesher(mesh);
-    remesher.remesh();  
+    remesher.remesh();
 
-    meshViewer->update(); 
+    meshViewer->updateMeshBuffers();
+    meshViewer->update();
     QMessageBox::information(this, "完成", "Remesh 操作已成功完成！");
 }
