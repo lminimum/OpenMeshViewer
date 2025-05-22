@@ -44,7 +44,7 @@ public:
     void setBackgroundColor(const QColor& color);
     void setLightColor(const QColor& color);
 	void setForegroundColor(const QColor& color);
-
+    void buildExampleMesh(int type);
     QVector3D translation;    
     RenderMode renderMode;
 

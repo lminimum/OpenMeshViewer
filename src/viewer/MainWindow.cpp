@@ -102,10 +102,32 @@ MainWindow::MainWindow(QWidget* parent)
     controlLayout->addWidget(animGroup);
 
     QPushButton* remeshButton = new QPushButton("Remesh");
-    controlLayout->addWidget(remeshButton);
+    QPushButton* collapseButton = new QPushButton("Edge Collapse");
+    QPushButton* splitButton = new QPushButton("Edge Split");
+    QPushButton* flipButton = new QPushButton("Edge Flip");
+
+    QHBoxLayout* triangleLayout1 = new QHBoxLayout;
+    QHBoxLayout* triangleLayout2 = new QHBoxLayout;
+    triangleLayout1->addWidget(collapseButton);
+    triangleLayout1->addWidget(splitButton);
+    triangleLayout2->addWidget(flipButton);
+    triangleLayout2->addWidget(remeshButton);
+
+    controlLayout->addLayout(triangleLayout1);
+    controlLayout->addLayout(triangleLayout2);
 
     connect(remeshButton, &QPushButton::clicked, this, &MainWindow::remeshMesh);
-    controlLayout->addStretch();  // 填充底部空白
+    connect(collapseButton, &QPushButton::clicked, this, [this]() {
+        meshViewer->buildExampleMesh(0);  // 0: Collapse
+        });
+    connect(splitButton, &QPushButton::clicked, this, [this]() {
+        meshViewer->buildExampleMesh(1);  // 1: Split
+        });
+    connect(flipButton, &QPushButton::clicked, this, [this]() {
+        meshViewer->buildExampleMesh(2);  // 2: Flip
+        });
+
+	controlLayout->addStretch(); 
 
     meshViewer = new MeshViewerWidget();
     mainLayout->addWidget(controlPanel);

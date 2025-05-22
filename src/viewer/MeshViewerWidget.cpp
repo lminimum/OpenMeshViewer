@@ -474,3 +474,93 @@ void MeshViewerWidget::centerAndScaleMesh()
     update();
 
 }
+
+void MeshViewerWidget::buildExampleMesh(int type)
+{
+    mesh.clear();
+
+    if (type == 0) {
+        mesh.clear();
+
+        std::vector<Mesh::VertexHandle> vhandles;
+
+        std::vector<float> row_y = { 2.0f, 1.0f, 0.0f };
+        std::vector<int> row_counts = { 3, 4, 3 };  
+
+        for (int row = 0; row < 3; ++row) {
+            float y = row_y[row];
+            int count = row_counts[row];
+            for (int i = 0; i < count; ++i) {
+                float x = i * 1.0f;
+                if (row == 1) x -= 0.5f; 
+                vhandles.push_back(mesh.add_vertex(Mesh::Point(x, y, 0.0f)));
+            }
+        }
+
+        // 顶点编号参考（共 10 个）：
+        //   0   1   2       → 上排 3 个
+        // 3   4   5   6    → 中排 4 个
+        //   7   8   9       → 下排 3 个
+
+        // 定义 10 个面（每次加入两个三角形）
+        std::vector<std::vector<int>> faces = {
+            {0, 3, 4},
+            {1, 0, 4},
+            {1, 4, 5},
+            {1, 5, 2},
+            {2, 5, 6},
+            {3, 7, 4},
+            {4, 7, 8},
+            {4, 8, 5},
+            {5, 8, 9},
+            {5, 9, 6}
+        };
+
+        for (const auto& f : faces) {
+            std::vector<Mesh::VertexHandle> face = {
+                vhandles[f[0]],
+                vhandles[f[1]],
+                vhandles[f[2]]
+            };
+            auto fh = mesh.add_face(face);
+            if (!fh.is_valid()) {
+                std::cerr << "Face failed to add: " << f[0] << ", " << f[1] << ", " << f[2] << std::endl;
+            }
+        }
+    }
+    else if (type == 1) {
+        Mesh::VertexHandle v0 = mesh.add_vertex(Mesh::Point(0.0f, 0.0f, 0.0f));
+        Mesh::VertexHandle v1 = mesh.add_vertex(Mesh::Point(1.0f, 1.0f, 0.0f));
+        Mesh::VertexHandle v2 = mesh.add_vertex(Mesh::Point(2.0f, 0.0f, 0.0f));
+        Mesh::VertexHandle v3 = mesh.add_vertex(Mesh::Point(1.0f, -1.0f, 0.0f));
+
+        mesh.add_face({ v0, v1, v2 });
+        mesh.add_face({ v0, v2, v3 });
+
+    }
+    else if (type == 2) {
+        Mesh::VertexHandle v0 = mesh.add_vertex(Mesh::Point(0.0f, 0.0f, 0.0f));
+        Mesh::VertexHandle v1 = mesh.add_vertex(Mesh::Point(1.0f, 1.0f, 0.0f));
+        Mesh::VertexHandle v2 = mesh.add_vertex(Mesh::Point(2.0f, 0.0f, 0.0f));
+        Mesh::VertexHandle v3 = mesh.add_vertex(Mesh::Point(1.0f, -1.0f, 0.0f));
+
+        mesh.add_face({ v0, v1, v2 });
+        mesh.add_face({ v0, v2, v3 });
+    }
+
+    mesh.request_face_normals();
+    mesh.request_vertex_normals();
+    mesh.update_normals();
+
+    meshLoaded = true;
+
+    centerAndScaleMesh();
+
+    makeCurrent();
+    updateMeshBuffers();
+    doneCurrent();
+
+    resetView();
+
+    update();
+}
