@@ -15,9 +15,10 @@ private:
     int maxIter_;
 
     void splitLongEdges();
-    void collapseShortEdges();
-    void flipEdges();
-    void smoothTangential();
+    void collapseShortEdges(float low, float high);
+	void equalizeValences();
+  /*  void flipEdges();
+    void smoothTangential();*/
 };
 
 #endif // ISOTROPIC_REMESHER_H
