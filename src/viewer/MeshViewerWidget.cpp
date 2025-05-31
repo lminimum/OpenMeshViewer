@@ -536,7 +536,6 @@ void MeshViewerWidget::buildExampleMesh(int type)
 
         mesh.add_face({ v0, v1, v2 });
         mesh.add_face({ v0, v2, v3 });
-
     }
     else if (type == 2) {
         Mesh::VertexHandle v0 = mesh.add_vertex(Mesh::Point(0.0f, 0.0f, 0.0f));

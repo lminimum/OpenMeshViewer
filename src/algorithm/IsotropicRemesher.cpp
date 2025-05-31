@@ -34,9 +34,10 @@ IsotropicRemesher::IsotropicRemesher(Mesh& mesh)
 
     float L = computeTargetLength(mesh_);
     targetMin_ = 0.8f * L;
-    targetMax_ = 4/3  * L;
+	targetMax_ = 4.0f / 3.0f * L; 
     maxIter_ = 5;
 }
+
 void IsotropicRemesher::remesh() {
     for (int iter = 0; iter < maxIter_; ++iter) {
         qDebug() << "[remesh] Iteration" << iter + 1;
@@ -52,7 +53,7 @@ void IsotropicRemesher::remesh() {
     }
     qDebug() << "[remesh] Complete.";
 }
-// —— 仅执行长边拆分（Edge Split）操作 ——
+
 void IsotropicRemesher::splitLongEdges() {
     std::unordered_set<Mesh::EdgeHandle> edgeSet;
     for (auto eh : mesh_.edges()) {
