@@ -9,30 +9,30 @@ class MeshViewerWidget;
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+	Q_OBJECT
 public:
-    explicit MainWindow(QWidget* parent = nullptr);
-    void loadDefaultModel();
+	explicit MainWindow(QWidget* parent = nullptr);
+	void loadDefaultModel();
 
 private slots:
-    void toggleRenderMode(RenderMode mode);
-    void openFile();
+	void toggleRenderMode(RenderMode mode);
+	void openFile();
 	void deleteMesh();
 	void saveFile();
-    void chooseBackgroundColor();
-    void chooseLightColor();
-    void chooseForegroundColor();
-    void remeshMesh();
+	void chooseBackgroundColor();
+	void chooseLightColor();
+	void chooseForegroundColor();
+	void remeshMesh();
 
 private:
-    void createActions();
-    void createMenus();
+	void createActions();
+	void createMenus();
 
-    MeshViewerWidget* meshViewer;
+	MeshViewerWidget* meshViewer;
 
-    QPushButton* bgColorButton;
-    QPushButton* lightColorButton;
-    QPushButton* fgColorButton;
+	QPushButton* bgColorButton;
+	QPushButton* lightColorButton;
+	QPushButton* fgColorButton;
 };
 
 #endif
