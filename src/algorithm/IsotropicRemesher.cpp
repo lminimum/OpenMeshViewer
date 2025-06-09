@@ -35,7 +35,7 @@ IsotropicRemesher::IsotropicRemesher(Mesh& mesh)
     float L = computeTargetLength(mesh_);
     targetMin_ = 0.8f * L;
 	targetMax_ = 4.0f / 3.0f * L; 
-    maxIter_ = 5;
+    maxIter_ = 100;
 }
 
 void IsotropicRemesher::remesh() {
@@ -48,6 +48,9 @@ void IsotropicRemesher::remesh() {
         mesh_.garbage_collection();
         equalizeValences();
         mesh_.garbage_collection();
+
+        tangentialRelaxation();  // 新增：切向松弛
+        projectToSurface();      // 新增：曲面投影
 
         mesh_.update_normals();
     }
@@ -267,5 +270,181 @@ void IsotropicRemesher::equalizeValences() {
         ++flippedCount;
     }
 
+
     qDebug() << "[equalizeValences] Total edge flips:" << flippedCount;
+}
+
+void IsotropicRemesher::tangentialRelaxation() {
+    try {
+        if (!mesh_.has_vertex_normals()) {
+            mesh_.request_vertex_normals();
+        }
+        mesh_.update_normals();
+
+        std::vector<Mesh::Point> newPositions(mesh_.n_vertices());
+        float relaxationFactor = 0.2f;
+
+        for (int i = 0; i < mesh_.n_vertices(); ++i) {
+            auto vh = Mesh::VertexHandle(i);
+
+            if (!vh.is_valid() || mesh_.status(vh).deleted()) {
+                std::cerr << "Warning: Skip invalid vertex (relaxation) ID=" << i << std::endl;
+                newPositions[i] = mesh_.point(vh);
+                continue;
+            }
+
+            if (mesh_.is_boundary(vh)) {
+                newPositions[i] = mesh_.point(vh);
+                continue;
+            }
+
+            Mesh::Point avgPos(0.0f, 0.0f, 0.0f);
+            int neighborCount = 0;
+
+            for (auto vv_it = mesh_.vv_begin(vh); vv_it.is_valid(); ++vv_it) {
+                auto neighborVh = *vv_it;
+                if (!neighborVh.is_valid() || mesh_.status(neighborVh).deleted()) {
+                    std::cerr << "Warning: Skip invalid neighbor vertex ID=" << neighborVh.idx() << std::endl;
+                    continue;
+                }
+                avgPos += mesh_.point(neighborVh);
+                neighborCount++;
+            }
+
+            if (neighborCount > 0) {
+                avgPos /= static_cast<float>(neighborCount);
+                Mesh::Point displacement = avgPos - mesh_.point(vh);
+                Mesh::Point normal = mesh_.normal(vh);
+                float normalComponent = displacement | normal;
+                Mesh::Point tangentialDisplacement = displacement - normal * normalComponent;
+
+                float maxStep = targetMax_ * 0.5f;
+                if (tangentialDisplacement.norm() > maxStep) {
+                    tangentialDisplacement = tangentialDisplacement.normalized() * maxStep;
+                }
+
+                newPositions[i] = mesh_.point(vh) + relaxationFactor * tangentialDisplacement;
+            }
+            else {
+                newPositions[i] = mesh_.point(vh);
+            }
+        }
+
+        for (int i = 0; i < static_cast<int>(newPositions.size()); ++i) {
+            auto vh = Mesh::VertexHandle(i);
+            if (vh.is_valid() && !mesh_.status(vh).deleted() && !mesh_.is_boundary(vh)) {
+                mesh_.set_point(vh, newPositions[i]);
+            }
+        }
+
+        std::cout << "[tangentialRelaxation] Completed vertex tangential relaxation." << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error in tangentialRelaxation: " << e.what() << std::endl;
+        throw;
+    }
+}
+
+void IsotropicRemesher::projectToSurface() {
+    try {
+        std::cout << "[projectToSurface] Request and update vertex normals" << std::endl;
+        mesh_.request_vertex_normals();
+        std::cout << "Normals requested" << std::endl;
+        mesh_.update_vertex_normals();
+        std::cout << "Normals updated" << std::endl;
+
+        int vertexCount = 0;
+        for (auto vh : mesh_.vertices()) {
+            if (++vertexCount % 1000 == 0) {
+                std::cout << "[projectToSurface] Processing vertex " << vertexCount << std::endl;
+            }
+
+            if (!vh.is_valid() || mesh_.status(vh).deleted()) {
+                std::cout << "[projectToSurface] Skipping invalid vertex ID=" << vh.idx() << std::endl;
+                continue;
+            }
+
+            if (mesh_.is_boundary(vh)) continue;
+
+            Mesh::Point p = mesh_.point(vh);
+            Mesh::Point normal = mesh_.normal(vh);
+            float minDist = std::numeric_limits<float>::max();
+            Mesh::Point closestPoint = p;
+
+            int faceCount = 0;
+            for (auto vf_it = mesh_.vf_begin(vh); vf_it.is_valid(); ++vf_it) {
+                auto fh = *vf_it;
+                if (++faceCount % 1000 == 0) {
+                    std::cout << "[projectToSurface] Processing face " << faceCount << " for vertex " << vh.idx() << std::endl;
+                }
+
+                if (!fh.is_valid() || mesh_.status(fh).deleted()) {
+                    std::cout << "[projectToSurface] Skipping invalid face ID=" << fh.idx() << std::endl;
+                    continue;
+                }
+
+                Mesh::Point faceNormal = mesh_.normal(fh);
+                Mesh::Point faceCenter(0.0, 0.0, 0.0);
+                int validVerts = 0;
+
+                for (auto fv_it = mesh_.fv_begin(fh); fv_it.is_valid(); ++fv_it) {
+                    if (fv_it->is_valid() && !mesh_.status(*fv_it).deleted()) {
+                        faceCenter += mesh_.point(*fv_it);
+                        validVerts++;
+                    }
+                }
+
+                if (validVerts != 3) continue;
+                faceCenter /= 3.0f;
+
+                Mesh::Point vToFace = faceCenter - p;
+                float dist = vToFace | faceNormal;
+                Mesh::Point projectedPoint = p + dist * faceNormal;
+
+                if (isPointInsideTriangle(fh, projectedPoint)) {
+                    float currentDist = (projectedPoint - p).norm();
+                    if (currentDist < minDist) {
+                        minDist = currentDist;
+                        closestPoint = projectedPoint;
+                    }
+                }
+            }
+
+            if (vh.is_valid() && !mesh_.status(vh).deleted()) {
+                mesh_.set_point(vh, closestPoint);
+            }
+        }
+        std::cout << "[projectToSurface] Vertex projection completed, processed " << mesh_.n_vertices() << " vertices." << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[projectToSurface] Exception: " << e.what() << std::endl;
+        throw;
+    }
+}
+
+
+
+// 辅助函数：判断点是否在三角形内（用重心坐标）
+bool IsotropicRemesher::isPointInsideTriangle(Mesh::FaceHandle fh, const Mesh::Point& p) {
+    // 获取三角形的三个顶点
+    Mesh::ConstFaceVertexIter fv_it = mesh_.cfv_iter(fh);
+    Mesh::Point p0 = mesh_.point(*fv_it); ++fv_it;
+    Mesh::Point p1 = mesh_.point(*fv_it); ++fv_it;
+    Mesh::Point p2 = mesh_.point(*fv_it);
+
+    // 计算重心坐标
+    Mesh::Point v0 = p1 - p0, v1 = p2 - p0, v2 = p - p0;
+    float d00 = v0 | v0;
+    float d01 = v0 | v1;
+    float d11 = v1 | v1;
+    float d20 = v2 | v0;
+    float d21 = v2 | v1;
+    float denom = d00 * d11 - d01 * d01;
+
+    float alpha = (d11 * d20 - d01 * d21) / denom;
+    float beta = (d00 * d21 - d01 * d20) / denom;
+    float gamma = 1.0f - alpha - beta;
+
+    // 如果重心坐标都在 [0,1] 范围内，则点在三角形内
+    return (alpha >= 0) && (beta >= 0) && (gamma >= 0);
 }

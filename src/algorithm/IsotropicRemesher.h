@@ -17,6 +17,11 @@ private:
     void splitLongEdges();
     void collapseShortEdges(float low, float high);
 	void equalizeValences();
+    void tangentialRelaxation();  // 新增：切向松弛
+    void projectToSurface();      // 新增：曲面投影
+
+    // 辅助函数：判断点是否在三角形内（用于投影）
+    bool isPointInsideTriangle(Mesh::FaceHandle fh, const Mesh::Point& p);
   /*  void flipEdges();
     void smoothTangential();*/
 };
