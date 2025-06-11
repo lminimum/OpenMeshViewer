@@ -16,6 +16,8 @@
 #include <QMenuBar>
 #include <QStandardPaths>
 #include <QFile>
+#include <QFutureWatcher>
+#include <QtConcurrent/QtConcurrent> 
 
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
@@ -102,31 +104,16 @@ MainWindow::MainWindow(QWidget* parent)
 	controlLayout->addWidget(animGroup);
 
 	QPushButton* remeshButton = new QPushButton("Remesh");
-	QPushButton* collapseButton = new QPushButton("Edge Collapse");
-	QPushButton* splitButton = new QPushButton("Edge Split");
-	QPushButton* flipButton = new QPushButton("Edge Flip");
 
 	QHBoxLayout* triangleLayout1 = new QHBoxLayout;
 	QHBoxLayout* triangleLayout2 = new QHBoxLayout;
-	triangleLayout1->addWidget(collapseButton);
-	triangleLayout1->addWidget(splitButton);
-	triangleLayout2->addWidget(flipButton);
+
 	triangleLayout2->addWidget(remeshButton);
 
 	controlLayout->addLayout(triangleLayout1);
 	controlLayout->addLayout(triangleLayout2);
 
 	connect(remeshButton, &QPushButton::clicked, this, &MainWindow::remeshMesh);
-	connect(collapseButton, &QPushButton::clicked, this, [this]() {
-		meshViewer->buildExampleMesh(0);  // 0: Collapse
-		});
-	connect(splitButton, &QPushButton::clicked, this, [this]() {
-		meshViewer->buildExampleMesh(1);  // 1: Split
-		});
-	connect(flipButton, &QPushButton::clicked, this, [this]() {
-		meshViewer->buildExampleMesh(2);  // 2: Flip
-		});
-
 	controlLayout->addStretch(); 
 
 	meshViewer = new MeshViewerWidget();
@@ -283,11 +270,31 @@ void MainWindow::remeshMesh()
 		return;
 	}
 
-	Mesh& mesh = meshViewer->getMesh();  
-	IsotropicRemesher remesher(mesh);
-	remesher.remesh();
+	if (remeshWatcher) {
+		QMessageBox::information(this, "请稍候", "Remeshing 正在进行中，请勿重复操作");
+		return;
+	}
 
-	meshViewer->updateMeshBuffers();
-	meshViewer->update();
-	QMessageBox::information(this, "完成", "Remesh 操作已成功完成！");
+	// 锁定 Mesh 的引用
+	Mesh& mesh = meshViewer->getMesh();
+
+	// 创建 watcher
+	remeshWatcher = new QFutureWatcher<void>(this);
+	connect(remeshWatcher, &QFutureWatcher<void>::finished, this, [=]() {
+		meshViewer->updateMeshBuffers();
+		meshViewer->update();
+		QMessageBox::information(this, "完成", "Remesh 操作已成功完成！");
+		remeshWatcher->deleteLater();
+		remeshWatcher = nullptr;
+		});
+
+	statusBar()->showMessage("Remeshing in progress...");
+
+	// 异步执行 remesh
+	QFuture<void> future = QtConcurrent::run([&mesh]() {
+		IsotropicRemesher remesher(mesh);
+		remesher.remesh();
+		});
+
+	remeshWatcher->setFuture(future);
 }

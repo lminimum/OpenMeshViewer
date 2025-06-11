@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QPushButton>
+#include <QFutureWatcher>
 #include "MeshViewerWidget.h"
 
 class MeshViewerWidget;
@@ -25,6 +26,8 @@ private slots:
 	void remeshMesh();
 
 private:
+	QFutureWatcher<void>* remeshWatcher = nullptr;
+
 	void createActions();
 	void createMenus();
 
