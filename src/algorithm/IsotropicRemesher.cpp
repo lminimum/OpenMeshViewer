@@ -35,7 +35,7 @@ IsotropicRemesher::IsotropicRemesher(Mesh& mesh)
     float L = computeTargetLength(mesh_);
     targetMin_ = 0.8f * L;
 	targetMax_ = 4.0f / 3.0f * L; 
-    maxIter_ = 10;
+    maxIter_ = 100;
 }
 
 void IsotropicRemesher::remesh() {
@@ -276,64 +276,60 @@ void IsotropicRemesher::equalizeValences() {
 
 void IsotropicRemesher::tangentialRelaxation() {
     try {
-        // 确保法线存在
         if (!mesh_.has_vertex_normals()) {
             mesh_.request_vertex_normals();
         }
         mesh_.update_normals();
 
         std::vector<Mesh::Point> newPositions(mesh_.n_vertices());
-        float relaxationFactor = 0.2f;  // 平滑强度
+        float relaxationFactor = 0.2f;
 
         for (int i = 0; i < mesh_.n_vertices(); ++i) {
             auto vh = Mesh::VertexHandle(i);
 
-            // 跳过无效或已删除顶点
             if (!vh.is_valid() || mesh_.status(vh).deleted()) {
+                std::cerr << "Warning: Skip invalid vertex (relaxation) ID=" << i << std::endl;
                 newPositions[i] = mesh_.point(vh);
                 continue;
             }
 
-            // 保持边界顶点不动
             if (mesh_.is_boundary(vh)) {
                 newPositions[i] = mesh_.point(vh);
                 continue;
             }
 
-            // 计算邻居顶点的平均位置
             Mesh::Point avgPos(0.0f, 0.0f, 0.0f);
             int neighborCount = 0;
+
             for (auto vv_it = mesh_.vv_begin(vh); vv_it.is_valid(); ++vv_it) {
                 auto neighborVh = *vv_it;
-                if (!neighborVh.is_valid() || mesh_.status(neighborVh).deleted()) continue;
+                if (!neighborVh.is_valid() || mesh_.status(neighborVh).deleted()) {
+                    std::cerr << "Warning: Skip invalid neighbor vertex ID=" << neighborVh.idx() << std::endl;
+                    continue;
+                }
                 avgPos += mesh_.point(neighborVh);
                 neighborCount++;
             }
 
-            if (neighborCount == 0) {
+            if (neighborCount > 0) {
+                avgPos /= static_cast<float>(neighborCount);
+                Mesh::Point displacement = avgPos - mesh_.point(vh);
+                Mesh::Point normal = mesh_.normal(vh);
+                float normalComponent = displacement | normal;
+                Mesh::Point tangentialDisplacement = displacement - normal * normalComponent;
+
+                float maxStep = targetMax_ * 0.5f;
+                if (tangentialDisplacement.norm() > maxStep) {
+                    tangentialDisplacement = tangentialDisplacement.normalized() * maxStep;
+                }
+
+                newPositions[i] = mesh_.point(vh) + relaxationFactor * tangentialDisplacement;
+            }
+            else {
                 newPositions[i] = mesh_.point(vh);
-                continue;
             }
-
-            avgPos /= static_cast<float>(neighborCount);
-
-            // Laplacian 位移向量
-            Mesh::Point displacement = avgPos - mesh_.point(vh);
-
-            // 切向投影：使用 Gram-Schmidt 方法移除法线分量
-            Mesh::Point normal = mesh_.normal(vh).normalized();
-            Mesh::Point tangentialDisplacement = displacement - (normal | displacement) * normal;
-
-            // 可选：限制最大移动距离
-            float maxStep = targetMax_ * 0.5f;
-            if (tangentialDisplacement.norm() > maxStep) {
-                tangentialDisplacement = tangentialDisplacement.normalized() * maxStep;
-            }
-
-            newPositions[i] = mesh_.point(vh) + relaxationFactor * tangentialDisplacement;
         }
 
-        // 应用更新
         for (int i = 0; i < static_cast<int>(newPositions.size()); ++i) {
             auto vh = Mesh::VertexHandle(i);
             if (vh.is_valid() && !mesh_.status(vh).deleted() && !mesh_.is_boundary(vh)) {
@@ -341,14 +337,13 @@ void IsotropicRemesher::tangentialRelaxation() {
             }
         }
 
-        std::cout << "[tangentialRelaxation] Tangential relaxation completed with full projection." << std::endl;
+        std::cout << "[tangentialRelaxation] Completed vertex tangential relaxation." << std::endl;
     }
     catch (const std::exception& e) {
         std::cerr << "Error in tangentialRelaxation: " << e.what() << std::endl;
         throw;
     }
 }
-
 
 void IsotropicRemesher::projectToSurface() {
     try {
@@ -426,6 +421,8 @@ void IsotropicRemesher::projectToSurface() {
         throw;
     }
 }
+
+
 
 // 辅助函数：判断点是否在三角形内（用重心坐标）
 bool IsotropicRemesher::isPointInsideTriangle(Mesh::FaceHandle fh, const Mesh::Point& p) {
