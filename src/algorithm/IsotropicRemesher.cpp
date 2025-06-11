@@ -6,7 +6,6 @@
 #include <cmath>
 #include <QVector3D>
 
-// —— 辅助：计算全网平均边长 ——
 static float computeTargetLength(Mesh& mesh) {
 	double sum = 0.0;
 	size_t cnt = 0;
@@ -17,6 +16,7 @@ static float computeTargetLength(Mesh& mesh) {
 	auto average = cnt ? float(sum / cnt) : 0.0f;
 
 	qDebug() << "[computeTargetLength] Average Edge:" << average;
+	return average;
 }
 
 IsotropicRemesher::IsotropicRemesher(Mesh& mesh)
@@ -68,16 +68,16 @@ void IsotropicRemesher::splitLongEdges() {
 	while (!edgeSet.empty()) {
 		auto iter = edgeSet.begin();
 		Mesh::EdgeHandle eh = *iter;
-		edgeSet.erase(iter);
+		edgeSet.erase(iter);//取出集合中的一条边 eh 并将其从集合中移除
 
 		if (!mesh_.is_valid_handle(eh)) continue;
 		if (mesh_.status(eh).deleted()) continue;
 
-		float len = mesh_.calc_edge_length(eh);
+		float len = mesh_.calc_edge_length(eh);//读取边长
 		if (len > targetMax_) {
 			// 拆分并返回中点顶点句柄
 			auto mid = mesh_.calc_edge_midpoint(eh);
-			auto vh = mesh_.add_vertex(mid);
+			auto vh = mesh_.add_vertex(mid);//网格增加该中点
 			mesh_.split_edge(eh, vh);
 			++totalSplit;
 
@@ -354,7 +354,7 @@ void IsotropicRemesher::projectToSurface() {
 
 		int vertexCount = 0;
 		for (auto vh : mesh_.vertices()) {
-			if (++vertexCount % 1000 == 0) {
+			if (++vertexCount % 5000 == 0) {
 				std::cout << "[projectToSurface] Processing vertex " << vertexCount << std::endl;
 			}
 
@@ -373,7 +373,7 @@ void IsotropicRemesher::projectToSurface() {
 			int faceCount = 0;
 			for (auto vf_it = mesh_.vf_begin(vh); vf_it.is_valid(); ++vf_it) {
 				auto fh = *vf_it;
-				if (++faceCount % 1000 == 0) {
+				if (++faceCount % 5000 == 0) {
 					std::cout << "[projectToSurface] Processing face " << faceCount << " for vertex " << vh.idx() << std::endl;
 				}
 
@@ -421,8 +421,9 @@ void IsotropicRemesher::projectToSurface() {
 	}
 }
 
-// 辅助函数：判断点是否在三角形内（用重心坐标）
+
 bool IsotropicRemesher::isPointInsideTriangle(Mesh::FaceHandle fh, const Mesh::Point& p) {
+	// 辅助函数：判断点是否在三角形内（用重心坐标）
 	// 获取三角形的三个顶点
 	Mesh::ConstFaceVertexIter fv_it = mesh_.cfv_iter(fh);
 	Mesh::Point p0 = mesh_.point(*fv_it); ++fv_it;
